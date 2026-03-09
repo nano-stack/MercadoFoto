@@ -45,58 +45,100 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Marketplace")),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : publicaciones.isEmpty
-          ? const Center(child: Text("No hay publicaciones"))
-          : ListView.builder(
-              itemCount: publicaciones.length,
-              itemBuilder: (context, index) {
-                final item = publicaciones[index];
+    if (loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-                return Card(
-                  margin: const EdgeInsets.all(10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Image.network(
-                        "${ApiService.baseUrl}${item['imagen_url']}",
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
+    if (publicaciones.isEmpty) {
+      return const Center(child: Text("No hay publicaciones"));
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(10),
+
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 0.65,
+      ),
+
+      itemCount: publicaciones.length,
+
+      itemBuilder: (context, index) {
+        final item = publicaciones[index];
+
+        return Card(
+          elevation: 4,
+
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              /// IMAGEN PRODUCTO
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
+                child: Image.network(
+                  "${ApiService.baseUrl}${item['imagen_url']}",
+                  height: 150,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.all(8),
+
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// TITULO
+                    Text(
+                      item['titulo'],
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item['titulo'],
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(item['descripcion']),
-                            const SizedBox(height: 5),
-                            Text(
-                              "\$${item['precio']}",
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.green,
-                              ),
-                            ),
-                          ],
-                        ),
+                    ),
+
+                    const SizedBox(height: 5),
+
+                    /// DESCRIPCION
+                    Text(
+                      item['descripcion'],
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black54,
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    /// PRECIO
+                    Text(
+                      "\$${item['precio']}",
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

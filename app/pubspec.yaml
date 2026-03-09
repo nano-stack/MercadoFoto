@@ -59,6 +59,7 @@ flutter:
 
   assets:
     - assets/images/logo.png
+    - assets/images/banner_publicidad.jpg
 
 
   # The following line ensures that the Material Icons font is
