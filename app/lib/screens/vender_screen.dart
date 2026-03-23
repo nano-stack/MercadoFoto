@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+
 import '../services/api_service.dart';
 import 'confirmacion_screen.dart';
 
@@ -12,96 +14,92 @@ class VenderScreen extends StatefulWidget {
 }
 
 class _VenderScreenState extends State<VenderScreen> {
-  bool _loading = false;
+  final ImagePicker picker = ImagePicker();
+  bool loading = false;
 
-  Future<void> _seleccionarImagen(ImageSource source) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: source);
-
-    if (pickedFile == null) return;
-
-    File file = File(pickedFile.path);
-
+  Future<void> analizarImagen(File imagen) async {
     setState(() {
-      _loading = true;
+      loading = true;
     });
 
-    try {
-      final jsonData = await ApiService.enviarImagen(file);
+    var request = http.MultipartRequest(
+      "POST",
+      Uri.parse("${ApiService.baseUrl}/analizar"),
+    );
 
-      final String titulo = jsonData['titulo'] ?? '';
-      final String descripcion = jsonData['descripcion'] ?? '';
-      final String imagenUrl = jsonData['imagen_url'] ?? '';
+    request.files.add(await http.MultipartFile.fromPath("file", imagen.path));
 
-      setState(() {
-        _loading = false;
-      });
+    var response = await request.send();
+    var respStr = await response.stream.bytesToString();
 
-      if (!mounted) return;
+    setState(() {
+      loading = false;
+    });
 
+    if (response.statusCode == 200) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ConfirmacionScreen(
-            titulo: titulo,
-            descripcion: descripcion,
-            imagenUrl: imagenUrl,
-          ),
+          builder: (_) => ConfirmacionScreen(data: respStr, imagen: imagen),
         ),
-      );
-    } catch (e) {
-      setState(() {
-        _loading = false;
-      });
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error al analizar la imagen")),
       );
     }
   }
 
-  void _mostrarOpciones() {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text("Tomar Foto"),
-                onTap: () {
-                  Navigator.pop(context);
-                  _seleccionarImagen(ImageSource.camera);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text("Elegir desde Galería"),
-                onTap: () {
-                  Navigator.pop(context);
-                  _seleccionarImagen(ImageSource.gallery);
-                },
-              ),
-            ],
-          ),
-        );
-      },
+  Future<void> abrirCamara() async {
+    final XFile? foto = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
     );
+
+    if (foto != null) {
+      analizarImagen(File(foto.path));
+    }
+  }
+
+  Future<void> abrirGaleria() async {
+    final XFile? foto = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+
+    if (foto != null) {
+      analizarImagen(File(foto.path));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Publicar producto")),
+      appBar: AppBar(title: const Text("Vender producto")),
+
       body: Center(
-        child: _loading
+        child: loading
             ? const CircularProgressIndicator()
-            : ElevatedButton(
-                onPressed: _mostrarOpciones,
-                child: const Text("Seleccionar Imagen"),
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Selecciona una imagen",
+                    style: TextStyle(fontSize: 22),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  ElevatedButton.icon(
+                    onPressed: abrirCamara,
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text("Abrir cámara"),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  ElevatedButton.icon(
+                    onPressed: abrirGaleria,
+                    icon: const Icon(Icons.photo),
+                    label: const Text("Abrir galería"),
+                  ),
+                ],
               ),
       ),
     );

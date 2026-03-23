@@ -1,49 +1,118 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'vender_screen.dart';
-import 'marketplace_screen.dart';
+import 'package:http/http.dart' as http;
 
-class HomeScreen extends StatelessWidget {
+import '../services/api_service.dart';
+import '../services/session_service.dart';
+
+import 'vender_screen.dart' as vender;
+import 'marketplace_screen.dart';
+import 'registro_screen.dart';
+import 'mi_cuenta_screen.dart';
+import 'login_screen.dart';
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  final bool usuarioRegistrado = false;
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int? userId;
+  String nombreUsuario = "Usuario invitado";
+
+  @override
+  void initState() {
+    super.initState();
+    inicializarHome();
+  }
+
+  Future<void> inicializarHome() async {
+    await iniciarSesion();
+    await cargarUsuario();
+  }
+
+  /// SESIÓN GUEST
+  Future<void> iniciarSesion() async {
+    final usuarioRegistrado = await SessionService.obtenerUser();
+    if (usuarioRegistrado != null) return;
+
+    final guest = await SessionService.obtenerGuest();
+    if (guest != null && guest.toString().isNotEmpty) return;
+
+    try {
+      final response = await http.get(Uri.parse("${ApiService.baseUrl}/guest"));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final guestId = data["guest_id"]?.toString();
+
+        if (guestId != null && guestId.isNotEmpty) {
+          await SessionService.guardarGuest(guestId);
+        }
+      }
+    } catch (e) {
+      debugPrint("Error en iniciarSesion(): $e");
+    }
+  }
+
+  /// CARGAR USUARIO
+  Future<void> cargarUsuario() async {
+    final id = await SessionService.obtenerUser();
+    final nombre = await SessionService.obtenerNombre();
+
+    if (!mounted) return;
+
+    setState(() {
+      userId = id;
+      nombreUsuario = nombre ?? "Usuario invitado";
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F7F7),
       body: SafeArea(
         child: Stack(
           children: [
-            /// CONTENIDO PRINCIPAL
-            Column(
-              children: [
-                /// ESPACIO PARA HEADER (LOGO + BUSCADOR)
-                const SizedBox(height: 110),
+            /// SCROLL
+            SingleChildScrollView(
+              child: Column(
+                children: [
+                  const SizedBox(height: 110),
 
-                /// BANNER IA
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 10),
-                  height: 140,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    image: const DecorationImage(
-                      image: AssetImage("assets/images/banner_publicidad.jpg"),
-                      fit: BoxFit.cover,
+                  /// BANNER
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 10),
+                    height: 140,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      image: const DecorationImage(
+                        image: AssetImage(
+                          "assets/images/banner_publicidad.jpg",
+                        ),
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-                /// MARKETPLACE
-                const Expanded(child: MarketplaceScreen()),
+                  /// MARKETPLACE
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height,
+                    child: const MarketplaceScreen(),
+                  ),
 
-                /// ESPACIO PARA BOTONES INFERIORES
-                const SizedBox(height: 90),
-              ],
+                  const SizedBox(height: 100),
+                ],
+              ),
             ),
 
-            /// HEADER SUPERIOR
+            /// HEADER FIJO
             Positioned(
               top: 10,
               left: 15,
@@ -83,16 +152,49 @@ class HomeScreen extends StatelessWidget {
 
                   const SizedBox(width: 10),
 
-                  /// BOTÓN REGISTRARSE (ANTES ESTABA ABAJO)
-                  OutlinedButton(
-                    onPressed: () {},
-                    child: const Text("Registrarse"),
-                  ),
+                  /// USUARIO / REGISTRO
+                  userId == null
+                      ? OutlinedButton(
+                          onPressed: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const RegistroScreen(),
+                              ),
+                            );
+
+                            await cargarUsuario();
+                          },
+                          child: const Text("Registrarse"),
+                        )
+                      : GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const MiCuentaScreen(),
+                              ),
+                            );
+                          },
+                          child: Row(
+                            children: [
+                              const Icon(Icons.person),
+                              const SizedBox(width: 6),
+                              SizedBox(
+                                width: 100,
+                                child: Text(
+                                  nombreUsuario,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                 ],
               ),
             ),
 
-            /// BOTONES INFERIORES
+            /// FOOTER FIJO
             Positioned(
               bottom: 0,
               left: 0,
@@ -107,21 +209,42 @@ class HomeScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    /// INGRESAR
-                    ElevatedButton(
-                      onPressed: () {},
-                      child: const Text("Ingresar"),
-                    ),
+                    /// LOGIN / LOGOUT
+                    userId == null
+                        ? ElevatedButton(
+                            onPressed: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const LoginScreen(),
+                                ),
+                              );
+
+                              await cargarUsuario();
+                            },
+                            child: const Text("Ingresar"),
+                          )
+                        : ElevatedButton(
+                            onPressed: () async {
+                              await SessionService.cerrarSesion();
+
+                              if (!mounted) return;
+
+                              /// 🔥 SOLUCIÓN REAL
+                              await inicializarHome();
+                            },
+                            child: const Text("Cerrar sesión"),
+                          ),
 
                     const SizedBox(width: 15),
 
-                    /// VENDER (ANTES ESTABA ARRIBA)
+                    /// VENDER
                     ElevatedButton(
                       onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const VenderScreen(),
+                            builder: (context) => const vender.VenderScreen(),
                           ),
                         );
                       },

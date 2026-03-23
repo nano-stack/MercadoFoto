@@ -25,6 +25,7 @@ class ApiService {
     required String descripcion,
     required String precio,
     required String imagenUrl,
+    required String guestId,
   }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/publicar'),
@@ -34,6 +35,7 @@ class ApiService {
         "descripcion": descripcion,
         "precio": double.parse(precio),
         "imagen_url": imagenUrl,
+        "guest_id": guestId,
       }),
     );
 

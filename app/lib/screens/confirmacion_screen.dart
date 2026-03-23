@@ -1,17 +1,21 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
 import '../services/api_service.dart';
-import 'marketplace_screen.dart';
+import '../services/session_service.dart';
+import 'mis_publicaciones_screen.dart';
 
 class ConfirmacionScreen extends StatefulWidget {
-  final String titulo;
-  final String descripcion;
-  final String imagenUrl;
+  final String data;
+  final File imagen;
 
   const ConfirmacionScreen({
     super.key,
-    required this.titulo,
-    required this.descripcion,
-    required this.imagenUrl,
+    required this.data,
+    required this.imagen,
   });
 
   @override
@@ -19,123 +23,116 @@ class ConfirmacionScreen extends StatefulWidget {
 }
 
 class _ConfirmacionScreenState extends State<ConfirmacionScreen> {
-  late TextEditingController _tituloController;
-  late TextEditingController _descripcionController;
-  final TextEditingController _precioController = TextEditingController();
-
-  bool _loading = false;
+  late TextEditingController titulo;
+  late TextEditingController descripcion;
+  final precio = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _tituloController = TextEditingController(text: widget.titulo);
-    _descripcionController = TextEditingController(text: widget.descripcion);
+
+    final jsonData = jsonDecode(widget.data);
+
+    titulo = TextEditingController(text: jsonData["titulo"]);
+    descripcion = TextEditingController(text: jsonData["descripcion"]);
   }
 
-  Future<void> _publicar() async {
-    if (_precioController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Debes ingresar un precio")));
-      return;
-    }
-
-    setState(() {
-      _loading = true;
-    });
-
+  Future<void> publicar() async {
     try {
-      await ApiService.publicarProducto(
-        titulo: _tituloController.text,
-        descripcion: _descripcionController.text,
-        precio: _precioController.text,
-        imagenUrl: widget.imagenUrl,
+      var request = http.MultipartRequest(
+        "POST",
+        Uri.parse("${ApiService.baseUrl}/publicar"),
       );
 
-      setState(() {
-        _loading = false;
-      });
+      /// CAMPOS
+      request.fields["titulo"] = titulo.text.trim();
+      request.fields["descripcion"] = descripcion.text.trim();
+      request.fields["precio"] = precio.text.trim().isEmpty
+          ? "0"
+          : precio.text.trim();
+
+      /// IMAGEN
+      request.files.add(
+        await http.MultipartFile.fromPath("file", widget.imagen.path),
+      );
+
+      /// SESION (guest o user)
+      final session = await SessionService.obtenerSesion();
+
+      if (session["user_id"] != null) {
+        request.fields["user_id"] = session["user_id"].toString();
+      }
+
+      if (session["guest_id"] != null) {
+        request.fields["guest_id"] = session["guest_id"].toString();
+      }
+
+      /// ENVIAR
+      final response = await request.send();
+
+      final respStr = await response.stream.bytesToString();
+
+      if (response.statusCode != 200) {
+        debugPrint("ERROR PUBLICAR: $respStr");
+        throw Exception("Error al publicar");
+      }
 
       if (!mounted) return;
 
+      /// 🔥 IR A MIS PUBLICACIONES (NO marketplace)
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => MarketplaceScreen()),
+        MaterialPageRoute(builder: (_) => const MisPublicacionesScreen()),
         (route) => false,
       );
     } catch (e) {
-      setState(() {
-        _loading = false;
-      });
+      debugPrint("ERROR PUBLICAR: $e");
+
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error al publicar producto")),
+        const SnackBar(content: Text("Error al publicar el producto")),
       );
     }
   }
 
-  @override
-  void dispose() {
-    _tituloController.dispose();
-    _descripcionController.dispose();
-    _precioController.dispose();
-    super.dispose();
+  Widget campo(String label, TextEditingController controller) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+
+      child: TextField(
+        controller: controller,
+
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final String imagenCompleta = "${ApiService.baseUrl}${widget.imagenUrl}";
-
     return Scaffold(
-      appBar: AppBar(title: const Text("Confirmar publicación")),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      appBar: AppBar(title: const Text("Confirmar producto")),
+
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+
+        child: ListView(
           children: [
-            Image.network(imagenCompleta, height: 250),
+            Image.file(widget.imagen, height: 200),
+
             const SizedBox(height: 20),
 
-            TextField(
-              controller: _tituloController,
-              decoration: const InputDecoration(
-                labelText: "Título",
-                border: OutlineInputBorder(),
-              ),
-            ),
+            campo("Título", titulo),
+            campo("Descripción", descripcion),
+            campo("Precio", precio),
 
-            const SizedBox(height: 15),
+            const SizedBox(height: 20),
 
-            TextField(
-              controller: _descripcionController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: "Descripción",
-                border: OutlineInputBorder(),
-              ),
-            ),
-
-            const SizedBox(height: 15),
-
-            TextField(
-              controller: _precioController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: "Precio",
-                border: OutlineInputBorder(),
-              ),
-            ),
-
-            const SizedBox(height: 25),
-
-            _loading
-                ? const CircularProgressIndicator()
-                : SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _publicar,
-                      child: const Text("PUBLICAR"),
-                    ),
-                  ),
+            /// 🔥 BOTÓN ACTUALIZADO
+            ElevatedButton(onPressed: publicar, child: const Text("Publicar")),
           ],
         ),
       ),
