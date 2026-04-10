@@ -37,6 +37,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Necesitamos acceso a la cámara para publicar productos</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Usa Face ID para ingresar a tu cuenta de forma rápida y segura</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

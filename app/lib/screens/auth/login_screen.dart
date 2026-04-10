@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/auth_service.dart';
+import '../../services/biometric_service.dart';
 import '../../theme/app_theme.dart';
 import '../home_screen.dart';
 
@@ -43,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         await AuthService.registrarConEmail(email, pass);
       }
-      _irAHome();
+      await _ofrecerFaceId();
     } catch (e) {
       final msg = AuthService.mensajeError(e);
       if (msg.isNotEmpty) _snack(msg);
@@ -57,13 +58,51 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loadingGoogle = true);
     try {
       await AuthService.loginConGoogle();
-      _irAHome();
+      await _ofrecerFaceId();
     } catch (e) {
       final msg = AuthService.mensajeError(e);
       if (msg.isNotEmpty) _snack(msg);
     } finally {
       if (mounted) setState(() => _loadingGoogle = false);
     }
+  }
+
+  // ── Face ID: ofrecer activación tras primer login ────────────────────────
+  Future<void> _ofrecerFaceId() async {
+    if (!mounted) return;
+
+    // Solo ofrecer si el dispositivo tiene biometría Y el usuario no lo activó aún
+    final disponible = await BiometricService.isAvailable();
+    final yaActivado = await BiometricService.isEnabled();
+
+    if (!disponible || yaActivado) {
+      _irAHome();
+      return;
+    }
+
+    // Mostrar bottom sheet de activación
+    if (!mounted) return;
+    final activar = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _SheetFaceId(),
+    );
+
+    if (activar == true) {
+      // Verificar que funciona antes de guardar preferencia
+      final ok = await BiometricService.authenticate(
+        reason: 'Confirma tu Face ID para activarlo en OkVenta',
+      );
+      if (ok) {
+        await BiometricService.setEnabled(true);
+        if (mounted) _snack('Face ID activado correctamente');
+      }
+    }
+
+    _irAHome();
   }
 
   // ── Navegación ───────────────────────────────────────────────────────────
@@ -287,6 +326,105 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Bottom sheet: activar Face ID ────────────────────────────────────────────
+class _SheetFaceId extends StatelessWidget {
+  const _SheetFaceId();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.divider,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 28),
+
+          // Ícono
+          Container(
+            width: 64, height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.face_retouching_natural_rounded,
+              color: AppColors.primary,
+              size: 32,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          const Text(
+            'Activa Face ID',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Ingresa más rápido la próxima vez.\nSolo miras y listo.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.grayMid,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 28),
+
+          // Botón activar
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.textOnPrimary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text(
+                'Activar Face ID',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Botón omitir
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text(
+                'Ahora no',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.grayMid,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

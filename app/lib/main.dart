@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'services/biometric_service.dart';
 import 'services/session_service.dart';
 import 'theme/app_theme.dart';
 
@@ -42,13 +43,23 @@ class _AuthGateState extends State<_AuthGate> {
   @override
   void initState() {
     super.initState();
-    _route();
+    // Diferir la navegación hasta después del primer frame —
+    // Navigator no existe durante initState/_firstBuild.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _route());
   }
 
   Future<void> _route() async {
-    // Sesión Firebase activa → HomeScreen
+    // Sesión Firebase activa → verificar biometría si está habilitada
     if (FirebaseAuth.instance.currentUser != null) {
-      _go(const HomeScreen());
+      final biometricEnabled = await BiometricService.isEnabled();
+      if (biometricEnabled) {
+        final ok = await BiometricService.authenticate(
+          reason: 'Verifica tu identidad para ingresar a OkVenta',
+        );
+        _go(ok ? const HomeScreen() : const LoginScreen());
+      } else {
+        _go(const HomeScreen());
+      }
       return;
     }
     // Guest session activa → HomeScreen

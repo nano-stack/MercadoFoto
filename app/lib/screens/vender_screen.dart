@@ -233,7 +233,7 @@ class _VenderScreenState extends State<VenderScreen> {
           const SizedBox(height: 12),
 
           const Text(
-            "¿Cómo querés\npublicar?",
+            "¿Cómo quieres\npublicar?",
             style: TextStyle(
               fontSize: 30,
               fontWeight: FontWeight.w800,
@@ -243,7 +243,7 @@ class _VenderScreenState extends State<VenderScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            "Elegí el método que mejor se adapte a vos.",
+            "Elige el método que más te acomode.",
             style: TextStyle(
               fontSize: 15,
               color: AppColors.grayMid,
@@ -397,7 +397,7 @@ class _VenderScreenState extends State<VenderScreen> {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    "Ingresá vos mismo el título, descripción, precio y categoría. Ideal si ya sabés exactamente qué querés publicar.",
+                    "Ingresa tú mismo el título, descripción, precio y categoría. Ideal si ya sabes exactamente qué quieres publicar.",
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,

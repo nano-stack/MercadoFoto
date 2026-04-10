@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/auth_service.dart';
+import '../services/biometric_service.dart';
 import '../theme/app_theme.dart';
 import 'auth/login_screen.dart';
 import 'mis_publicaciones_screen.dart';
@@ -29,11 +30,37 @@ class _MiCuentaScreenState extends State<MiCuentaScreen> {
 
   String tipoUsuario = "persona";
   String nombreMostrado = "";
+  bool _biometricAvailable = false;
+  bool _biometricEnabled   = false;
 
   @override
   void initState() {
     super.initState();
     cargarDatos();
+    _cargarBiometria();
+  }
+
+  Future<void> _cargarBiometria() async {
+    final available = await BiometricService.isAvailable();
+    final enabled   = await BiometricService.isEnabled();
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = available;
+        _biometricEnabled   = enabled;
+      });
+    }
+  }
+
+  Future<void> _toggleFaceId(bool value) async {
+    if (value) {
+      // Verificar biometría antes de activar
+      final ok = await BiometricService.authenticate(
+        reason: 'Confirma tu Face ID para activarlo en OkVenta',
+      );
+      if (!ok) return;
+    }
+    await BiometricService.setEnabled(value);
+    if (mounted) setState(() => _biometricEnabled = value);
   }
 
   Future<void> cargarDatos() async {
@@ -308,6 +335,43 @@ class _MiCuentaScreenState extends State<MiCuentaScreen> {
     );
   }
 
+  Widget _itemFaceId() {
+    return Column(
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.face_retouching_natural_rounded,
+              color: AppColors.carbon,
+              size: 20,
+            ),
+          ),
+          title: const Text(
+            "Face ID",
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          trailing: Switch(
+            value: _biometricEnabled,
+            onChanged: _toggleFaceId,
+            activeColor: AppColors.primary,
+          ),
+        ),
+        const Divider(height: 1, thickness: 0.5),
+      ],
+    );
+  }
+
   Widget _itemMenu(IconData icon, String titulo, VoidCallback onTap) {
     return Column(
       children: [
@@ -514,6 +578,7 @@ class _MiCuentaScreenState extends State<MiCuentaScreen> {
                               "Favoritos", () {}),
                           _itemMenu(
                               Icons.history_rounded, "Historial", () {}),
+                          if (_biometricAvailable) _itemFaceId(),
                         ],
                       ),
                     ),
