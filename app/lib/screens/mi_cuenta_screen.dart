@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/auth_service.dart';
-import '../services/session_service.dart';
 import '../theme/app_theme.dart';
+import 'auth/login_screen.dart';
 import 'mis_publicaciones_screen.dart';
 
 class MiCuentaScreen extends StatefulWidget {
@@ -345,7 +345,11 @@ class _MiCuentaScreenState extends State<MiCuentaScreen> {
   Future<void> _cerrarSesion() async {
     await AuthService.cerrarSesion(); // Firebase + Google + SharedPreferences
     if (!mounted) return;
-    Navigator.pop(context);
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
   }
 
   @override
