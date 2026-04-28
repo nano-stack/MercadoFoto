@@ -8,7 +8,7 @@ pydantic==2.12.5
 openai>=1.30.0
 
 # ── Procesamiento de imagen (rembg + fondo) ──────────────
-rembg==2.0.61
+rembg==2.0.75
 pillow==11.3.0
 numpy>=1.24.0
 
