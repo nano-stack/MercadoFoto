@@ -31,6 +31,7 @@ class _MiCuentaScreenState extends State<MiCuentaScreen> {
 
   String tipoUsuario = "persona";
   String nombreMostrado = "";
+  String _fotoUrl = "";
   bool _biometricEnabled = false;
 
   @override
@@ -85,6 +86,7 @@ class _MiCuentaScreenState extends State<MiCuentaScreen> {
       numeroCuentaCtrl.text = prefs.getString("numero_cuenta") ?? "";
       correoBancoCtrl.text = prefs.getString("correo_banco") ?? "";
       nombreMostrado = prefs.getString("nombre") ?? "";
+      _fotoUrl = prefs.getString("foto_url") ?? "";
     });
   }
 
@@ -113,6 +115,27 @@ class _MiCuentaScreenState extends State<MiCuentaScreen> {
       ),
     );
     await cargarDatos();
+  }
+
+  Widget _avatar({double size = 44}) {
+    final inicial = nombreMostrado.isNotEmpty ? nombreMostrado[0].toUpperCase() : "U";
+    final tienefoto = _fotoUrl.isNotEmpty;
+    return CircleAvatar(
+      radius: size / 2,
+      backgroundColor: AppColors.carbon,
+      backgroundImage: tienefoto ? NetworkImage(_fotoUrl) : null,
+      onBackgroundImageError: tienefoto ? (_, __) {} : null,
+      child: tienefoto
+          ? null
+          : Text(
+              inicial,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: size * 0.4,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+    );
   }
 
   Widget _input({
@@ -423,10 +446,6 @@ class _MiCuentaScreenState extends State<MiCuentaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final inicial = nombreMostrado.isNotEmpty
-        ? nombreMostrado[0].toUpperCase()
-        : "U";
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -451,24 +470,7 @@ class _MiCuentaScreenState extends State<MiCuentaScreen> {
                   const SizedBox(width: 12),
                   Image.asset('assets/images/logo.png', height: 38),
                   const Spacer(),
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(
-                      color: AppColors.carbon,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        inicial,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
+                  _avatar(size: 44),
                 ],
               ),
             ),
@@ -499,6 +501,38 @@ class _MiCuentaScreenState extends State<MiCuentaScreen> {
                           ),
                         ),
                       ),
+
+                    const SizedBox(height: 20),
+
+                    // Avatar grande centrado
+                    Center(
+                      child: Stack(
+                        children: [
+                          _avatar(size: 80),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const PerfilInfoScreen()),
+                              ).then((_) => cargarDatos()),
+                              child: Container(
+                                width: 26,
+                                height: 26,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.edit_rounded,
+                                    size: 14, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
                     const SizedBox(height: 20),
 
