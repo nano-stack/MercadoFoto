@@ -26,7 +26,7 @@ def init_users_db():
     """)
 
     # Migraciones seguras para columnas nuevas
-    for col in ["google_id TEXT", "firebase_uid TEXT", "lat REAL", "lng REAL", "direccion TEXT", "comuna TEXT", "ciudad TEXT"]:
+    for col in ["google_id TEXT", "firebase_uid TEXT", "lat REAL", "lng REAL", "direccion TEXT", "comuna TEXT", "ciudad TEXT", "apellido TEXT", "foto_url TEXT"]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col}")
         except Exception:
@@ -81,10 +81,16 @@ def crear_usuario(rut, nombre, email, password):
 # CREAR O RECUPERAR USUARIO VÍA FIREBASE
 # --------------------------------------------------
 
-def crear_o_obtener_usuario_firebase(firebase_uid: str, email: str, nombre: str) -> dict:
+def crear_o_obtener_usuario_firebase(
+    firebase_uid: str,
+    email: str,
+    nombre: str,
+    apellido: str = "",
+    foto_url: str = "",
+) -> dict:
     """
     Busca usuario por firebase_uid. Si no existe, busca por email.
-    Si tampoco existe, lo crea. Devuelve dict con id y nombre.
+    Si tampoco existe, lo crea. Devuelve dict con id, nombre, apellido y foto_url.
     """
     conn = sqlite3.connect(DB)
     cursor = conn.cursor()
@@ -92,36 +98,42 @@ def crear_o_obtener_usuario_firebase(firebase_uid: str, email: str, nombre: str)
     try:
         # 1. Buscar por firebase_uid
         cursor.execute(
-            "SELECT id, nombre FROM users WHERE firebase_uid = ?",
+            "SELECT id, nombre, apellido, foto_url FROM users WHERE firebase_uid = ?",
             (firebase_uid,)
         )
         row = cursor.fetchone()
         if row:
-            return {"id": row[0], "nombre": row[1]}
+            # Actualizar apellido y foto si vienen y no estaban
+            if apellido or foto_url:
+                cursor.execute(
+                    "UPDATE users SET apellido = COALESCE(NULLIF(apellido,''), ?), foto_url = COALESCE(NULLIF(foto_url,''), ?) WHERE id = ?",
+                    (apellido, foto_url, row[0])
+                )
+                conn.commit()
+            return {"id": row[0], "nombre": row[1], "apellido": row[2] or apellido, "foto_url": row[3] or foto_url}
 
         # 2. Buscar por email (login previo con email/password)
         cursor.execute(
-            "SELECT id, nombre FROM users WHERE email = ?",
+            "SELECT id, nombre, apellido, foto_url FROM users WHERE email = ?",
             (email,)
         )
         row = cursor.fetchone()
         if row:
-            # Vincular firebase_uid al usuario existente
             cursor.execute(
-                "UPDATE users SET firebase_uid = ? WHERE id = ?",
-                (firebase_uid, row[0])
+                "UPDATE users SET firebase_uid = ?, apellido = COALESCE(NULLIF(apellido,''), ?), foto_url = COALESCE(NULLIF(foto_url,''), ?) WHERE id = ?",
+                (firebase_uid, apellido, foto_url, row[0])
             )
             conn.commit()
-            return {"id": row[0], "nombre": row[1]}
+            return {"id": row[0], "nombre": row[1], "apellido": row[2] or apellido, "foto_url": row[3] or foto_url}
 
         # 3. Crear usuario nuevo
         cursor.execute("""
-            INSERT INTO users (nombre, email, firebase_uid, rut)
-            VALUES (?, ?, ?, ?)
-        """, (nombre, email, firebase_uid, ""))
+            INSERT INTO users (nombre, apellido, foto_url, email, firebase_uid, rut)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (nombre, apellido, foto_url, email, firebase_uid, ""))
 
         conn.commit()
-        return {"id": cursor.lastrowid, "nombre": nombre}
+        return {"id": cursor.lastrowid, "nombre": nombre, "apellido": apellido, "foto_url": foto_url}
 
     finally:
         conn.close()

@@ -299,6 +299,8 @@ class FirebaseLoginRequest(BaseModel):
     firebase_uid: str
     email: str
     nombre: Optional[str] = None
+    apellido: Optional[str] = None
+    foto_url: Optional[str] = None
     guest_id: Optional[str] = None
 
 
@@ -331,6 +333,8 @@ def login_firebase(data: FirebaseLoginRequest):
             firebase_uid=data.firebase_uid,
             email=data.email,
             nombre=nombre,
+            apellido=data.apellido or "",
+            foto_url=data.foto_url or "",
         )
 
         if data.guest_id and data.guest_id.strip():
@@ -339,6 +343,8 @@ def login_firebase(data: FirebaseLoginRequest):
         return {
             "user_id": usuario["id"],
             "nombre": usuario["nombre"],
+            "apellido": usuario.get("apellido", ""),
+            "foto_url": usuario.get("foto_url", ""),
             "email": data.email,
             "mensaje": "Sesión iniciada correctamente",
         }

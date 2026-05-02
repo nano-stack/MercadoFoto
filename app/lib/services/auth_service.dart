@@ -94,16 +94,22 @@ class AuthService {
   /// Crea o recupera el user_id del backend y persiste la sesión local.
   static Future<void> _syncConBackend(User firebaseUser) async {
     final guestId = await SessionService.obtenerGuest();
-    final nombre = firebaseUser.displayName ??
-        (firebaseUser.email?.split('@').first ?? 'Usuario');
+
+    // Separar nombre y apellido desde displayName ("Fernando Pinto" → "Fernando", "Pinto")
+    final parts = (firebaseUser.displayName ?? '').trim().split(' ');
+    final nombre   = parts.isNotEmpty && parts[0].isNotEmpty ? parts[0] : (firebaseUser.email?.split('@').first ?? 'Usuario');
+    final apellido = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+    final fotoUrl  = firebaseUser.photoURL ?? '';
 
     final res = await http.post(
       Uri.parse('${ApiService.baseUrl}/login/firebase'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'firebase_uid': firebaseUser.uid,
-        'email': firebaseUser.email ?? '',
-        'nombre': nombre,
+        'email':        firebaseUser.email ?? '',
+        'nombre':       nombre,
+        'apellido':     apellido,
+        'foto_url':     fotoUrl,
         if (guestId != null && guestId.isNotEmpty) 'guest_id': guestId,
       }),
     );
@@ -115,6 +121,8 @@ class AuthService {
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     await SessionService.guardarUser(data['user_id'] as int);
     await SessionService.guardarNombre(data['nombre'] as String);
+    await SessionService.guardarApellido(data['apellido'] as String? ?? '');
+    await SessionService.guardarFotoUrl(data['foto_url'] as String? ?? '');
     await SessionService.guardarEmail(firebaseUser.email ?? '');
     await SessionService.guardarGuest('');
   }

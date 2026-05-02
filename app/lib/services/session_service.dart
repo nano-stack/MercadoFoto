@@ -1,10 +1,12 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SessionService {
-  static const _guestKey   = "guest_id";
-  static const _userKey    = "user_id";
-  static const _nombreKey  = "nombre";
-  static const _emailKey   = "email";
+  static const _guestKey    = "guest_id";
+  static const _userKey     = "user_id";
+  static const _nombreKey   = "nombre";
+  static const _apellidoKey = "apellido";
+  static const _emailKey    = "email";
+  static const _fotoUrlKey  = "foto_url";
 
   // ── GUEST ─────────────────────────────────────────────────────────────
   static Future<void> guardarGuest(String guestId) async {
@@ -39,6 +41,28 @@ class SessionService {
     return prefs.getString(_nombreKey);
   }
 
+  // ── APELLIDO ──────────────────────────────────────────────────────────
+  static Future<void> guardarApellido(String apellido) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_apellidoKey, apellido);
+  }
+
+  static Future<String?> obtenerApellido() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_apellidoKey);
+  }
+
+  // ── FOTO URL ──────────────────────────────────────────────────────────
+  static Future<void> guardarFotoUrl(String url) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_fotoUrlKey, url);
+  }
+
+  static Future<String?> obtenerFotoUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_fotoUrlKey);
+  }
+
   // ── EMAIL ─────────────────────────────────────────────────────────────
   static Future<void> guardarEmail(String email) async {
     final prefs = await SharedPreferences.getInstance();
@@ -54,10 +78,12 @@ class SessionService {
   static Future<Map<String, dynamic>> obtenerSesion() async {
     final prefs = await SharedPreferences.getInstance();
     return {
-      "user_id": prefs.getInt(_userKey),
+      "user_id":  prefs.getInt(_userKey),
       "guest_id": prefs.getString(_guestKey),
-      "nombre": prefs.getString(_nombreKey),
-      "email": prefs.getString(_emailKey),
+      "nombre":   prefs.getString(_nombreKey),
+      "apellido": prefs.getString(_apellidoKey),
+      "foto_url": prefs.getString(_fotoUrlKey),
+      "email":    prefs.getString(_emailKey),
     };
   }
 
@@ -66,6 +92,8 @@ class SessionService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userKey);
     await prefs.remove(_nombreKey);
+    await prefs.remove(_apellidoKey);
+    await prefs.remove(_fotoUrlKey);
     await prefs.remove(_emailKey);
     await prefs.remove(_guestKey);
   }
