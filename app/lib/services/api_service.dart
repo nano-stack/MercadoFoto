@@ -11,6 +11,19 @@ class ApiService {
   static const String baseUrl = "https://okventa-backend.onrender.com";
 
   // ──────────────────────────────────────────────
+  // CARGA MASIVA
+  // ──────────────────────────────────────────────
+
+  static Future<void> enviarPlantilla(String email) async {
+    final uri = Uri.parse('$baseUrl/enviar_plantilla')
+        .replace(queryParameters: {'email': email});
+    final response = await http.post(uri);
+    if (response.statusCode != 200) {
+      throw Exception("No se pudo enviar la plantilla: ${response.body}");
+    }
+  }
+
+  // ──────────────────────────────────────────────
   // ANÁLISIS IA
   // ──────────────────────────────────────────────
 

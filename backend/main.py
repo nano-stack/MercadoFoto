@@ -32,6 +32,7 @@ from services.background_service import quitar_fondo
 from services.storage_service import guardar_imagen_procesada
 from services.vision_service import detectar_producto
 from services.trust_score_service import calcular_trust_score
+from services.email_service import enviar_plantilla_carga_masiva
 
 # --------------------------------------------------
 # FUNCIONES DE BASE DE DATOS
@@ -353,6 +354,26 @@ def login_firebase(data: FirebaseLoginRequest):
         print("ERROR EN /login/firebase:", repr(e))
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# --------------------------------------------------
+# ENVIAR PLANTILLA CARGA MASIVA
+# --------------------------------------------------
+
+@app.post("/enviar_plantilla")
+def enviar_plantilla(email: str):
+    """
+    Envía la plantilla Excel de carga masiva al correo indicado.
+    """
+    try:
+        enviar_plantilla_carga_masiva(email)
+        return {"mensaje": f"Plantilla enviada a {email}"}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        print("ERROR EN /enviar_plantilla:", repr(e))
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="No se pudo enviar el correo. Verifica la configuración SMTP.")
 
 
 # --------------------------------------------------
