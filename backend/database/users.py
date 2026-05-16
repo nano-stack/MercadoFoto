@@ -128,9 +128,9 @@ def crear_o_obtener_usuario_firebase(
 
         # 3. Crear usuario nuevo
         cursor.execute("""
-            INSERT INTO users (nombre, apellido, foto_url, email, firebase_uid, rut)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (nombre, apellido, foto_url, email, firebase_uid, ""))
+            INSERT INTO users (nombre, apellido, foto_url, email, firebase_uid)
+            VALUES (?, ?, ?, ?, ?)
+        """, (nombre, apellido, foto_url, email, firebase_uid))
 
         conn.commit()
         return {"id": cursor.lastrowid, "nombre": nombre, "apellido": apellido, "foto_url": foto_url}
