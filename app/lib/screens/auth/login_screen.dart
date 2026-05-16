@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 import '../../services/auth_service.dart';
+import '../../services/api_service.dart';
 import '../../services/biometric_service.dart';
 import '../../theme/app_theme.dart';
 import '../home_screen.dart';
@@ -106,6 +109,59 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // ── Navegación ───────────────────────────────────────────────────────────
+  Future<void> _solicitarReset() async {
+    final emailCtrl = TextEditingController();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Restablecer contraseña'),
+        content: TextField(
+          controller: emailCtrl,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
+            labelText: 'Tu correo electrónico',
+            prefixIcon: Icon(Icons.email_outlined),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary),
+            child: const Text('Enviar',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+    final email = emailCtrl.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      _snack('Ingresa un correo válido');
+      return;
+    }
+
+    try {
+      final res = await http.post(
+        Uri.parse('${ApiService.baseUrl}/solicitar_reset'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+      if (res.statusCode == 200) {
+        _snack('Si el correo está registrado, recibirás un enlace en tu bandeja de entrada');
+      } else {
+        _snack('Error al enviar. Intenta de nuevo.');
+      }
+    } catch (_) {
+      _snack('Sin conexión al servidor');
+    }
+  }
+
   void _irAHome() {
     if (!mounted) return;
     Navigator.pushReplacement(
@@ -260,7 +316,22 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              // ── Olvidé mi contraseña ──────────────────────────────────────
+              if (_isLogin)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _solicitarReset,
+                    child: const Text(
+                      '¿Olvidaste tu contraseña?',
+                      style: TextStyle(
+                        color: AppColors.grayMid,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 12),
 
               // ── Botón principal ───────────────────────────────────────────
               SizedBox(

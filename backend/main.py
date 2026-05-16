@@ -7,6 +7,8 @@ import traceback
 import sqlite3
 import json
 import os
+import secrets
+import bcrypt
 
 # Centraliza paths (DB y uploads) — debe importarse antes que todo lo demás
 import config  # noqa: F401  (crea los directorios al importarse)
@@ -17,7 +19,7 @@ from config import UPLOADS_DIR
 # THIRD PARTY
 # --------------------------------------------------
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -32,7 +34,7 @@ from services.background_service import quitar_fondo
 from services.storage_service import guardar_imagen_procesada
 from services.vision_service import detectar_producto
 from services.trust_score_service import calcular_trust_score
-from services.email_service import enviar_plantilla_carga_masiva
+from services.email_service import enviar_plantilla_carga_masiva, enviar_email_reset_password
 
 # --------------------------------------------------
 # FUNCIONES DE BASE DE DATOS
@@ -62,6 +64,9 @@ from database.users import (
     crear_o_obtener_usuario_firebase,
     actualizar_ubicacion_usuario,
     obtener_ubicacion_usuario,
+    crear_reset_token,
+    validar_reset_token,
+    usar_reset_token,
 )
 
 from database.chat import (
@@ -1019,3 +1024,89 @@ def perfil_publico(user_id: int):
         "nombre": nombre,
         "publicaciones": publicaciones,
     }
+
+
+# --------------------------------------------------
+# RESET DE CONTRASEÑA
+# --------------------------------------------------
+
+class SolicitarResetData(BaseModel):
+    email: str
+
+@app.post("/solicitar_reset")
+def solicitar_reset(data: SolicitarResetData):
+    email = data.email.lower().strip()
+    usuario = obtener_usuario_por_email(email)
+    # Siempre responder OK para no revelar si el email existe
+    if usuario:
+        token = secrets.token_urlsafe(32)
+        crear_reset_token(email, token)
+        reset_url = f"https://okventa-backend.onrender.com/reset_password?token={token}"
+        try:
+            enviar_email_reset_password(email, reset_url)
+        except Exception as e:
+            print(f"Error enviando email reset: {e}")
+    return {"mensaje": "Si el correo está registrado, recibirás un enlace para restablecer tu contraseña."}
+
+
+@app.get("/reset_password")
+def reset_password_form(token: str):
+    from fastapi.responses import HTMLResponse
+    email = validar_reset_token(token)
+    if not email:
+        return HTMLResponse("""
+        <html><body style='font-family:sans-serif;text-align:center;padding:60px'>
+        <h2>❌ Enlace inválido o expirado</h2>
+        <p>Solicita un nuevo enlace desde la app OkVenta.</p>
+        </body></html>
+        """)
+    return HTMLResponse(f"""
+    <html>
+    <head><meta name='viewport' content='width=device-width,initial-scale=1'>
+    <style>
+      body{{font-family:sans-serif;max-width:400px;margin:60px auto;padding:20px}}
+      input{{width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;font-size:16px;box-sizing:border-box}}
+      button{{width:100%;padding:14px;background:#00B4A0;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer}}
+      h2{{color:#333}}p{{color:#666}}
+    </style>
+    </head>
+    <body>
+    <h2>Nueva contraseña</h2>
+    <p>Ingresa tu nueva contraseña para <b>{email}</b></p>
+    <form method='post' action='/reset_password'>
+      <input type='hidden' name='token' value='{token}'>
+      <input type='password' name='password' placeholder='Nueva contraseña' required minlength='6'>
+      <input type='password' name='password2' placeholder='Confirmar contraseña' required minlength='6'>
+      <button type='submit'>Guardar contraseña</button>
+    </form>
+    </body></html>
+    """)
+
+
+@app.post("/reset_password")
+async def reset_password_submit(request: Request):
+    from fastapi.responses import HTMLResponse
+    from fastapi.datastructures import FormData
+    form = await request.form()
+    token = form.get("token", "")
+    password = form.get("password", "")
+    password2 = form.get("password2", "")
+
+    if password != password2:
+        return HTMLResponse("<html><body style='font-family:sans-serif;text-align:center;padding:60px'><h2>❌ Las contraseñas no coinciden</h2><a href='javascript:history.back()'>Volver</a></body></html>")
+
+    if len(password) < 6:
+        return HTMLResponse("<html><body style='font-family:sans-serif;text-align:center;padding:60px'><h2>❌ La contraseña debe tener al menos 6 caracteres</h2><a href='javascript:history.back()'>Volver</a></body></html>")
+
+    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    ok = usar_reset_token(token, hashed)
+
+    if not ok:
+        return HTMLResponse("<html><body style='font-family:sans-serif;text-align:center;padding:60px'><h2>❌ Enlace inválido o expirado</h2></body></html>")
+
+    return HTMLResponse("""
+    <html><body style='font-family:sans-serif;text-align:center;padding:60px'>
+    <h2>✅ Contraseña actualizada</h2>
+    <p>Ya puedes iniciar sesión en la app OkVenta con tu nueva contraseña.</p>
+    </body></html>
+    """)

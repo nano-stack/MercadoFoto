@@ -32,8 +32,72 @@ def init_users_db():
         except Exception:
             pass
 
+    # Tabla de tokens para reset de contraseña
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL,
+        token TEXT UNIQUE NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        used INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
     conn.commit()
     conn.close()
+
+
+# --------------------------------------------------
+# RESET DE CONTRASEÑA
+# --------------------------------------------------
+
+def crear_reset_token(email: str, token: str):
+    import datetime
+    conn = sqlite3.connect(DB)
+    cursor = conn.cursor()
+    expires = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+    cursor.execute("DELETE FROM password_reset_tokens WHERE email = ?", (email,))
+    cursor.execute(
+        "INSERT INTO password_reset_tokens (email, token, expires_at) VALUES (?, ?, ?)",
+        (email, token, expires.isoformat())
+    )
+    conn.commit()
+    conn.close()
+
+
+def validar_reset_token(token: str):
+    import datetime
+    conn = sqlite3.connect(DB)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT email, expires_at, used FROM password_reset_tokens WHERE token = ?",
+        (token,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    email, expires_at, used = row
+    if used:
+        return None
+    if datetime.datetime.utcnow() > datetime.datetime.fromisoformat(expires_at):
+        return None
+    return email
+
+
+def usar_reset_token(token: str, nueva_password_hash: str):
+    conn = sqlite3.connect(DB)
+    cursor = conn.cursor()
+    email = validar_reset_token(token)
+    if not email:
+        conn.close()
+        return False
+    cursor.execute("UPDATE users SET password = ? WHERE email = ?", (nueva_password_hash, email))
+    cursor.execute("UPDATE password_reset_tokens SET used = 1 WHERE token = ?", (token,))
+    conn.commit()
+    conn.close()
+    return True
 
 
 # --------------------------------------------------

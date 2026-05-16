@@ -123,6 +123,40 @@ Si tienes alguna duda puedes escribirnos a fpinto@galmar.cl
         print(f"  ⚠ No se pudo enviar confirmación a {email_destino}: {e}")
 
 
+def enviar_email_reset_password(email_destino: str, reset_url: str) -> None:
+    """
+    Envía el link de reset de contraseña al usuario.
+    """
+    cfg = _cargar_config()
+    smtp_server = cfg.get("smtp_server") or cfg.get("imap_server", "")
+    smtp_port   = int(cfg.get("smtp_port", 587))
+    usuario     = cfg["email"]
+    password    = cfg["password"]
+
+    msg = MIMEMultipart()
+    msg["From"]    = f"OkVenta <{usuario}>"
+    msg["To"]      = email_destino
+    msg["Subject"] = "Restablecer contraseña — OkVenta"
+
+    cuerpo = f"""\
+Hola,
+
+Recibimos una solicitud para restablecer tu contraseña en OkVenta.
+
+Haz click en el siguiente enlace para crear una nueva contraseña:
+
+{reset_url}
+
+Este enlace expira en 1 hora.
+
+Si no solicitaste este cambio, puedes ignorar este correo.
+
+— Equipo OkVenta
+"""
+    msg.attach(MIMEText(cuerpo, "plain", "utf-8"))
+    _enviar(smtp_server, smtp_port, usuario, password, email_destino, msg)
+
+
 def _enviar(smtp_server, smtp_port, usuario, password, destino, msg):
     if smtp_port == 465:
         with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
