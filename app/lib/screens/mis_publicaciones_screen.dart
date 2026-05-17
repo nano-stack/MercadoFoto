@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
 import '../services/session_service.dart';
@@ -71,7 +72,144 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
       await cargarPublicaciones();
     } catch (e) {
       debugPrint("ERROR estado: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Error al actualizar el estado'),
+          backgroundColor: Colors.red,
+        ));
+      }
     }
+  }
+
+  Future<void> _confirmarVendido(Map<String, dynamic> producto) async {
+    // Verificar si el usuario eligió "no volver a mostrar"
+    final prefs = await SharedPreferences.getInstance();
+    final noMostrar = prefs.getBool('skip_confirm_vendido') ?? false;
+
+    if (noMostrar) {
+      await cambiarEstado(producto['id'] as int, 'vendido');
+      return;
+    }
+
+    bool noVolverMostrar = false;
+
+    final confirmar = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Ícono
+              Container(
+                width: 60, height: 60,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2E7D32).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle_outline,
+                    color: Color(0xFF2E7D32), size: 30),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '¿Confirmar vendido?',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '"${producto['titulo']}" migrará a tu lista de Vendidos.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 14, color: AppColors.grayMid, height: 1.4),
+              ),
+              const SizedBox(height: 20),
+              // Checkbox no volver a mostrar
+              GestureDetector(
+                onTap: () => setModalState(() => noVolverMostrar = !noVolverMostrar),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Checkbox(
+                      value: noVolverMostrar,
+                      onChanged: (v) =>
+                          setModalState(() => noVolverMostrar = v ?? false),
+                      activeColor: AppColors.primary,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    const Text(
+                      'No volver a mostrar',
+                      style: TextStyle(
+                          fontSize: 13, color: AppColors.grayMid),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Botones
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.divider),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Cancelar',
+                          style: TextStyle(color: AppColors.textSecondary)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E7D32),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Confirmar',
+                          style: TextStyle(color: Colors.white,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    if (noVolverMostrar) {
+      await prefs.setBool('skip_confirm_vendido', true);
+    }
+
+    await cambiarEstado(producto['id'] as int, 'vendido');
   }
 
   Future<void> _eliminar(Map<String, dynamic> producto) async {
@@ -242,7 +380,7 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
             icono: Icons.check_circle_outline,
             label: "Vendido",
             color: const Color(0xFF2E7D32),
-            onTap: () => cambiarEstado(producto['id'] as int, 'vendido'),
+            onTap: () => _confirmarVendido(producto),
           )
         else
           _botonAccion(
