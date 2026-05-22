@@ -7,7 +7,7 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       # 1. Código fuente
@@ -39,15 +39,7 @@ jobs:
           key: pods-${{ hashFiles('app/ios/Podfile.lock') }}
           restore-keys: pods-
 
-      # 6. Caché SPM packages
-      - name: Cache SPM
-        uses: actions/cache@v4
-        with:
-          path: ~/Library/Developer/Xcode/DerivedData/Runner-*/SourcePackages
-          key: spm-${{ hashFiles('app/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
-          restore-keys: spm-
-
-      # 7. Build number automático
+      # 6. Build number automático
       - name: Set build number
         working-directory: app
         run: |
@@ -55,7 +47,7 @@ jobs:
           sed -i '' "s/^version: .*/version: 1.0.0+$BUILD/" pubspec.yaml
           echo "Build number: $BUILD"
 
-      # 8. Instalar certificado de distribución
+      # 7. Instalar certificado de distribución
       - name: Install certificate
         env:
           CERTIFICATE_P12: ${{ secrets.CERTIFICATE_P12 }}
@@ -70,7 +62,7 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: \
             -s -k "" build.keychain
 
-      # 9. Instalar provisioning profile y obtener UUID
+      # 8. Instalar provisioning profile y obtener UUID
       - name: Install provisioning profile
         env:
           PROVISIONING_PROFILE: ${{ secrets.PROVISIONING_PROFILE }}
@@ -84,7 +76,7 @@ jobs:
           echo "PROFILE_UUID=$UUID" >> $GITHUB_ENV
           echo "Profile UUID: $UUID"
 
-      # 10. Inyectar firma manual SOLO en Runner (no toca SPM/Pods)
+      # 9. Inyectar firma manual SOLO en Runner
       - name: Configure Runner signing
         working-directory: app/ios
         run: |
@@ -106,12 +98,7 @@ jobs:
           print("Runner signing configured")
           PYEOF
 
-      # 11. Compilar Dart sin codesign
-      - name: Flutter build (no codesign)
-        working-directory: app
-        run: flutter build ios --release --no-codesign
-
-      # 12. Crear ExportOptions.plist
+      # 10. Crear ExportOptions.plist
       - name: Create ExportOptions
         run: |
           cat > app/ios/ExportOptions.plist << PLIST
@@ -136,29 +123,15 @@ jobs:
           </plist>
           PLIST
 
-      # 13. Archivar
-      - name: Xcode archive
+      # 11. Build IPA (un solo paso: compila + archiva + exporta)
+      - name: Build IPA
         working-directory: app
         run: |
-          xcodebuild archive \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -archivePath build/Runner.xcarchive \
-            DEVELOPMENT_TEAM=ASN79QKDK7 \
-            OTHER_CODE_SIGN_FLAGS="--keychain build.keychain"
+          flutter build ipa --release \
+            --export-options-plist=ios/ExportOptions.plist \
+            --no-tree-shake-icons
 
-      # 14. Exportar IPA
-      - name: Export IPA
-        working-directory: app
-        run: |
-          xcodebuild -exportArchive \
-            -archivePath build/Runner.xcarchive \
-            -exportPath build/ios/ipa \
-            -exportOptionsPlist ios/ExportOptions.plist
-          ls build/ios/ipa/
-
-      # 15. Subir a TestFlight
+      # 12. Subir a TestFlight
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v1
         with:
