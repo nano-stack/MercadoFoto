@@ -54,12 +54,43 @@ jobs:
           echo "$PROVISIONING_PROFILE" | base64 --decode \
             > ~/Library/MobileDevice/Provisioning\ Profiles/okventa.mobileprovision
 
-      # 7. Build IPA
+      # 7. Configurar firma manual en Xcode
+      - name: Configure Xcode manual signing
+        working-directory: app/ios
+        run: |
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = "";/PROVISIONING_PROFILE_SPECIFIER = "OkVenta Distribution";/g' Runner.xcodeproj/project.pbxproj
+
+      # 8. Crear ExportOptions.plist
+      - name: Create ExportOptions
+        run: |
+          cat > app/ios/ExportOptions.plist << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>teamID</key>
+              <string>ASN79QKDK7</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>signingCertificate</key>
+              <string>Apple Distribution</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>com.okventa.app</key>
+                  <string>OkVenta Distribution</string>
+              </dict>
+          </dict>
+          PLIST
+
+      # 9. Build IPA
       - name: Build IPA
         working-directory: app
-        run: flutter build ipa --release
+        run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
 
-      # 8. Subir a TestFlight
+      # 10. Subir a TestFlight
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v1
         with:
