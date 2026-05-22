@@ -1250,45 +1250,47 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen> {
                       ),
                     ),
 
-                  // Info adicional
-                  const Text(
-                    "Información adicional",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                  // Info adicional — solo visible para el dueño
+                  if (esDueno) ...[
+                    const Text(
+                      "Información adicional",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 8),
 
-                  _campoExpandible(
-                    titulo: "Nuevo / Usado",
-                    abierto: _campoEstado,
-                    controller: _estadoController,
-                    toggle: () =>
-                        setState(() => _campoEstado = !_campoEstado),
-                  ),
-                  _campoExpandible(
-                    titulo: "Código universal",
-                    abierto: _campoCodigo,
-                    controller: _codigoController,
-                    toggle: () =>
-                        setState(() => _campoCodigo = !_campoCodigo),
-                  ),
-                  _campoExpandible(
-                    titulo: "SKU",
-                    abierto: _campoSKU,
-                    controller: _skuController,
-                    toggle: () =>
-                        setState(() => _campoSKU = !_campoSKU),
-                  ),
-                  _campoExpandible(
-                    titulo: "Stock",
-                    abierto: _campoStock,
-                    controller: _stockController,
-                    toggle: () =>
-                        setState(() => _campoStock = !_campoStock),
-                  ),
+                    _campoExpandible(
+                      titulo: "Nuevo / Usado",
+                      abierto: _campoEstado,
+                      controller: _estadoController,
+                      toggle: () =>
+                          setState(() => _campoEstado = !_campoEstado),
+                    ),
+                    _campoExpandible(
+                      titulo: "Código universal",
+                      abierto: _campoCodigo,
+                      controller: _codigoController,
+                      toggle: () =>
+                          setState(() => _campoCodigo = !_campoCodigo),
+                    ),
+                    _campoExpandible(
+                      titulo: "SKU",
+                      abierto: _campoSKU,
+                      controller: _skuController,
+                      toggle: () =>
+                          setState(() => _campoSKU = !_campoSKU),
+                    ),
+                    _campoExpandible(
+                      titulo: "Stock",
+                      abierto: _campoStock,
+                      controller: _stockController,
+                      toggle: () =>
+                          setState(() => _campoStock = !_campoStock),
+                    ),
+                  ],
 
                   const SizedBox(height: 28),
 

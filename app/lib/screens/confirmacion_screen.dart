@@ -235,6 +235,173 @@ class _ConfirmacionScreenState extends State<ConfirmacionScreen> {
     return '${t.titulo}: ${t.descripcion}';
   }
 
+  // ── Elegir ubicación antes de publicar ───────────────────────────────
+  Future<Map<String, double>?> _elegirUbicacion() async {
+    // Intentar obtener GPS
+    Position? posGPS;
+    try {
+      final perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.always ||
+          perm == LocationPermission.whileInUse) {
+        posGPS = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.low,
+        ).timeout(const Duration(seconds: 5));
+      }
+    } catch (_) {}
+
+    // Intentar obtener dirección registrada
+    Map<String, double>? posRegistrada;
+    try {
+      final session = await SessionService.obtenerSesion();
+      final userId = session["user_id"];
+      if (userId != null) {
+        final res = await http.get(
+          Uri.parse('${ApiService.baseUrl}/usuarios/$userId/ubicacion'),
+        );
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          if (data['lat'] != null && data['lng'] != null) {
+            posRegistrada = {
+              'lat': (data['lat'] as num).toDouble(),
+              'lng': (data['lng'] as num).toDouble(),
+            };
+          }
+        }
+      }
+    } catch (_) {}
+
+    if (!mounted) return null;
+
+    // Mostrar bottom sheet de elección
+    final resultado = await showModalBottomSheet<Map<String, double>?>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.divider,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Icon(Icons.location_on_rounded,
+                color: AppColors.primary, size: 36),
+            const SizedBox(height: 12),
+            const Text(
+              '¿Dónde está ubicado este producto?',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Esto ayuda a compradores cercanos a encontrarte.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppColors.grayMid),
+            ),
+            const SizedBox(height: 20),
+
+            // Opción: ubicación actual
+            if (posGPS != null)
+              _opcionUbicacion(
+                ctx: ctx,
+                icono: Icons.my_location_rounded,
+                titulo: 'Mi ubicación actual',
+                subtitulo: 'Usar el GPS de este dispositivo',
+                valor: {'lat': posGPS.latitude, 'lng': posGPS.longitude},
+              ),
+
+            // Opción: dirección registrada
+            if (posRegistrada != null)
+              _opcionUbicacion(
+                ctx: ctx,
+                icono: Icons.home_outlined,
+                titulo: 'Mi dirección registrada',
+                subtitulo: 'Usar la ubicación guardada en tu perfil',
+                valor: posRegistrada,
+              ),
+
+            // Opción: sin ubicación
+            _opcionUbicacion(
+              ctx: ctx,
+              icono: Icons.location_off_outlined,
+              titulo: 'Sin ubicación',
+              subtitulo: 'No incluir coordenadas en la publicación',
+              valor: null,
+              esNegativo: true,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    return resultado;
+  }
+
+  Widget _opcionUbicacion({
+    required BuildContext ctx,
+    required IconData icono,
+    required String titulo,
+    required String subtitulo,
+    required Map<String, double>? valor,
+    bool esNegativo = false,
+  }) {
+    return GestureDetector(
+      onTap: () => Navigator.pop(ctx, valor),
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: esNegativo
+              ? AppColors.background
+              : AppColors.primary.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: esNegativo ? AppColors.divider : AppColors.primary.withOpacity(0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icono,
+                color: esNegativo ? AppColors.grayMid : AppColors.primary,
+                size: 22),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(titulo,
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: esNegativo
+                              ? AppColors.textSecondary
+                              : AppColors.textPrimary)),
+                  Text(subtitulo,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.grayMid)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded,
+                color: AppColors.grayMid, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Publicar ──────────────────────────────────────────────────────────
   Future<void> publicar() async {
     if (precio.text.trim().isEmpty) {
@@ -252,17 +419,9 @@ class _ConfirmacionScreenState extends State<ConfirmacionScreen> {
 
     setState(() => _publicando = true);
 
-    // ── Intentar obtener GPS silenciosamente ──────────────────────────
-    Position? _pos;
-    try {
-      final perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.always ||
-          perm == LocationPermission.whileInUse) {
-        _pos = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.low,
-        ).timeout(const Duration(seconds: 5));
-      }
-    } catch (_) { /* sin GPS: se publica igual, sin coordenadas */ }
+    // ── Preguntar ubicación al usuario ────────────────────────────────
+    final ubicacion = await _elegirUbicacion();
+    if (!mounted) return;
 
     try {
       final request = http.MultipartRequest(
@@ -276,10 +435,10 @@ class _ConfirmacionScreenState extends State<ConfirmacionScreen> {
       request.fields["dimensiones"]  = _getDimensiones();
       if (_categoria.isNotEmpty)    request.fields["categoria"]    = _categoria;
       if (_subcategoria.isNotEmpty) request.fields["subcategoria"] = _subcategoria;
-      // Coordenadas GPS (si están disponibles)
-      if (_pos != null) {
-        request.fields["lat"] = _pos.latitude.toString();
-        request.fields["lng"] = _pos.longitude.toString();
+      // Coordenadas (si el usuario eligió incluirlas)
+      if (ubicacion != null) {
+        request.fields["lat"] = ubicacion['lat'].toString();
+        request.fields["lng"] = ubicacion['lng'].toString();
       }
 
       // Foto principal + extras

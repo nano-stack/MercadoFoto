@@ -31,6 +31,30 @@ class _EncontrarScreenState extends State<EncontrarScreen>
   Map<String, dynamic>? _seleccionado;
   late MapController _mapCtrl;
 
+  // ── Filtros por categoría ─────────────────────────────────────────────────
+  Set<String> _categoriasSeleccionadas = {};
+  bool _filtroCategoriasActivo = false;
+
+  List<Map<String, dynamic>> get _productosVisibles {
+    if (!_filtroCategoriasActivo || _categoriasSeleccionadas.isEmpty) {
+      return _productosCercanos;
+    }
+    return _productosCercanos.where((p) {
+      final cat = (p['categoria'] ?? '').toString();
+      return _categoriasSeleccionadas.contains(cat);
+    }).toList();
+  }
+
+  List<String> get _categoriasDisponibles {
+    final cats = _productosCercanos
+        .map((p) => (p['categoria'] ?? '').toString())
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList();
+    cats.sort();
+    return cats;
+  }
+
   // ── Animación pulso ───────────────────────────────────────────────────────
   late AnimationController _pulsoCtrl;
   late Animation<double>    _pulsoAnim;
@@ -272,18 +296,18 @@ class _EncontrarScreenState extends State<EncontrarScreen>
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(sel ? 8 : 6),
+              borderRadius: BorderRadius.circular(sel ? 6 : 4),
               child: Image.network(
                 "${ApiService.baseUrl}$imagenUrl",
-                width: sel ? 68 : 56,
-                height: sel ? 68 : 56,
+                width: sel ? 36 : 28,
+                height: sel ? 36 : 28,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
-                  width: sel ? 68 : 56,
-                  height: sel ? 68 : 56,
+                  width: sel ? 36 : 28,
+                  height: sel ? 36 : 28,
                   color: AppColors.background,
                   child: const Icon(Icons.image_outlined,
-                      color: AppColors.grayMid, size: 22),
+                      color: AppColors.grayMid, size: 14),
                 ),
               ),
             ),
@@ -305,7 +329,7 @@ class _EncontrarScreenState extends State<EncontrarScreen>
                 ],
               ),
               child: Text(
-                "\$${_formatPrecio(precio)}",
+                _formatPrecio(precio),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 9,
@@ -587,8 +611,8 @@ class _EncontrarScreenState extends State<EncontrarScreen>
       ));
     }
 
-    // Marcadores de productos
-    for (final p in _productosCercanos) {
+    // Marcadores de productos (filtrados)
+    for (final p in _productosVisibles) {
       final lat = (p['lat'] as num?)?.toDouble();
       final lng = (p['lng'] as num?)?.toDouble();
       if (lat == null || lng == null) continue;
@@ -596,15 +620,15 @@ class _EncontrarScreenState extends State<EncontrarScreen>
       final bool sel = _seleccionado?['id'] == p['id'];
       markers.add(Marker(
         point: LatLng(lat, lng),
-        width: sel ? 90 : 76,
-        height: sel ? 100 : 86,
+        width: sel ? 50 : 40,
+        height: sel ? 56 : 46,
         anchorPos: AnchorPos.align(AnchorAlign.top),
         builder: (_) => _buildMarker(p),
       ));
     }
 
     // Círculos de 2 km por producto
-    final circulos = _productosCercanos
+    final circulos = _productosVisibles
         .where((p) => p['lat'] != null && p['lng'] != null)
         .map((p) => CircleMarker(
               point: LatLng(
@@ -619,7 +643,109 @@ class _EncontrarScreenState extends State<EncontrarScreen>
             ))
         .toList();
 
-    return Stack(
+    return Column(
+      children: [
+        // ── Barra de filtros por categoría ────────────────────────────
+        if (_categoriasDisponibles.isNotEmpty)
+          Container(
+            color: AppColors.surface,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  // Toggle activar/desactivar filtros
+                  GestureDetector(
+                    onTap: () => setState(() {
+                      _filtroCategoriasActivo = !_filtroCategoriasActivo;
+                      if (!_filtroCategoriasActivo) _categoriasSeleccionadas.clear();
+                    }),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: _filtroCategoriasActivo
+                            ? AppColors.primary
+                            : AppColors.background,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _filtroCategoriasActivo
+                              ? AppColors.primary
+                              : AppColors.divider,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.filter_list_rounded,
+                            size: 14,
+                            color: _filtroCategoriasActivo
+                                ? Colors.white
+                                : AppColors.grayMid,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Filtrar',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _filtroCategoriasActivo
+                                  ? Colors.white
+                                  : AppColors.grayMid,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Chips de categoría (solo visibles cuando filtro activo)
+                  if (_filtroCategoriasActivo)
+                    ..._categoriasDisponibles.map((cat) {
+                      final sel = _categoriasSeleccionadas.contains(cat);
+                      return GestureDetector(
+                        onTap: () => setState(() {
+                          if (sel) {
+                            _categoriasSeleccionadas.remove(cat);
+                          } else {
+                            _categoriasSeleccionadas.add(cat);
+                          }
+                        }),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: sel
+                                ? AppColors.primary.withOpacity(0.12)
+                                : AppColors.background,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: sel
+                                  ? AppColors.primary
+                                  : AppColors.divider,
+                            ),
+                          ),
+                          child: Text(
+                            cat,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: sel
+                                  ? AppColors.primary
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                ],
+              ),
+            ),
+          ),
+
+        // ── Mapa ─────────────────────────────────────────────────────
+        Expanded(child: Stack(
       children: [
         // ── Mapa ─────────────────────────────────────────────────────
         AnimatedBuilder(
@@ -628,7 +754,7 @@ class _EncontrarScreenState extends State<EncontrarScreen>
             // Actualizar opacidades en cada tick
             final relleno = 0.06 + _pulsoAnim.value * 0.10;   // 0.06 → 0.16
             final borde   = 0.35 + _pulsoAnim.value * 0.45;   // 0.35 → 0.80
-            final circulosAnimados = _productosCercanos
+            final circulosAnimados = _productosVisibles
                 .where((p) => p['lat'] != null && p['lng'] != null)
                 .map((p) => CircleMarker(
                       point: LatLng(
@@ -782,7 +908,9 @@ class _EncontrarScreenState extends State<EncontrarScreen>
           ),
         ),
       ],
-    );
+        )),  // cierra Expanded(child: Stack(
+      ],
+    );  // cierra Column
   }
 
   Widget _fabMapa({required IconData icon, required VoidCallback onTap}) {
