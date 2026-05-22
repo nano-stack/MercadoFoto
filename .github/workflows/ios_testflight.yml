@@ -59,15 +59,35 @@ jobs:
           echo "PROFILE_UUID=$UUID" >> $GITHUB_ENV
           echo "Profile UUID: $UUID"
 
-      # 7. Compilar Dart sin codesign
+      # 7. Configurar firma manual solo en Runner (no en SPM/Pods)
+      - name: Configure Runner signing
+        working-directory: app/ios
+        run: |
+          python3 << 'PYEOF'
+          import re
+
+          with open('Runner.xcodeproj/project.pbxproj', 'r') as f:
+              content = f.read()
+
+          # Cambiar a firma manual
+          content = content.replace('CODE_SIGN_STYLE = Automatic;', 'CODE_SIGN_STYLE = Manual;')
+          content = content.replace('CODE_SIGN_STYLE = "Automatic";', 'CODE_SIGN_STYLE = Manual;')
+
+          with open('Runner.xcodeproj/project.pbxproj', 'w') as f:
+              f.write(content)
+
+          print("Signing configured")
+          PYEOF
+
+      # 8. Compilar Dart sin codesign
       - name: Flutter build (no codesign)
         working-directory: app
         run: flutter build ios --release --no-codesign
 
-      # 8. Crear ExportOptions.plist
+      # 9. Crear ExportOptions.plist
       - name: Create ExportOptions
         run: |
-          cat > app/ios/ExportOptions.plist << 'PLIST'
+          cat > app/ios/ExportOptions.plist << PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -83,13 +103,13 @@ jobs:
               <key>provisioningProfiles</key>
               <dict>
                   <key>com.okventa.app</key>
-                  <string>OkVenta Distribution</string>
+                  <string>${PROFILE_UUID}</string>
               </dict>
           </dict>
           </plist>
           PLIST
 
-      # 9. Archivar con xcodebuild (firma manual explícita)
+      # 10. Archivar con xcodebuild (firma solo en Runner, no global)
       - name: Xcode archive
         working-directory: app
         run: |
@@ -100,12 +120,10 @@ jobs:
             -archivePath build/Runner.xcarchive \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE="$PROFILE_UUID" \
-            PROVISIONING_PROFILE_SPECIFIER="OkVenta Distribution" \
             DEVELOPMENT_TEAM=ASN79QKDK7 \
-            -allowProvisioningUpdates
+            OTHER_CODE_SIGN_FLAGS="--keychain build.keychain"
 
-      # 10. Exportar IPA
+      # 11. Exportar IPA
       - name: Export IPA
         working-directory: app
         run: |
@@ -115,7 +133,7 @@ jobs:
             -exportOptionsPlist ios/ExportOptions.plist
           ls build/ios/ipa/
 
-      # 11. Subir a TestFlight
+      # 12. Subir a TestFlight
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v1
         with:
