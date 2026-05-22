@@ -26,7 +26,7 @@ def init_users_db():
     """)
 
     # Migraciones seguras para columnas nuevas
-    for col in ["google_id TEXT", "firebase_uid TEXT", "lat REAL", "lng REAL", "direccion TEXT", "comuna TEXT", "ciudad TEXT", "apellido TEXT", "foto_url TEXT"]:
+    for col in ["google_id TEXT", "firebase_uid TEXT", "lat REAL", "lng REAL", "direccion TEXT", "comuna TEXT", "ciudad TEXT", "apellido TEXT", "foto_url TEXT", "fcm_token TEXT"]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col}")
         except Exception:
@@ -46,6 +46,27 @@ def init_users_db():
 
     conn.commit()
     conn.close()
+
+
+# --------------------------------------------------
+# FCM TOKENS (notificaciones push)
+# --------------------------------------------------
+
+def guardar_fcm_token(user_id: int, token: str):
+    conn = sqlite3.connect(DB)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET fcm_token = ? WHERE id = ?", (token, user_id))
+    conn.commit()
+    conn.close()
+
+
+def obtener_fcm_token(user_id: int) -> str | None:
+    conn = sqlite3.connect(DB)
+    cursor = conn.cursor()
+    cursor.execute("SELECT fcm_token FROM users WHERE id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
 
 
 # --------------------------------------------------

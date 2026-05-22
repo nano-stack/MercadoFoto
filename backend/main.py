@@ -120,6 +120,9 @@ from database.guest_sessions import (
     crear_guest,
 )
 
+from database.users import guardar_fcm_token, obtener_fcm_token
+from services.fcm_service import enviar_push
+
 # --------------------------------------------------
 # CATEGORIZACIÓN AUTOMÁTICA (keyword-based, sin dependencias externas)
 # --------------------------------------------------
@@ -848,6 +851,15 @@ def actualizar_precio_publicacion(publicacion_id: int, nuevo_precio: float):
 # ENVIAR MENSAJE CHAT
 # --------------------------------------------------
 
+@app.post("/usuarios/{user_id}/fcm_token")
+def registrar_fcm_token(user_id: int, body: dict):
+    token = body.get("token", "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="Token requerido")
+    guardar_fcm_token(user_id, token)
+    return {"ok": True}
+
+
 @app.post("/chat/enviar")
 def enviar_mensaje(data: Mensaje):
     guardar_mensaje(
@@ -855,6 +867,25 @@ def enviar_mensaje(data: Mensaje):
         data.remitente_id,
         data.mensaje,
     )
+
+    # ── Notificación push al dueño del producto ──────────────────────
+    try:
+        pub = obtener_publicacion_por_id(data.publicacion_id)
+        if pub:
+            owner_id = pub.get("user_id")
+            if owner_id and owner_id != data.remitente_id:
+                fcm_token = obtener_fcm_token(owner_id)
+                if fcm_token:
+                    remitente = obtener_usuario_por_id(data.remitente_id)
+                    nombre_remitente = remitente.get("nombre", "Alguien") if remitente else "Alguien"
+                    enviar_push(
+                        fcm_token=fcm_token,
+                        titulo=f"Nuevo mensaje de {nombre_remitente}",
+                        cuerpo=data.mensaje[:100],
+                        data={"publicacion_id": str(data.publicacion_id), "tipo": "chat"},
+                    )
+    except Exception as e:
+        print(f"Push chat error: {e}")
 
     return {"mensaje": "Mensaje enviado"}
 

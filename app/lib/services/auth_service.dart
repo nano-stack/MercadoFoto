@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 
 import 'api_service.dart';
+import 'push_service.dart';
 import 'session_service.dart';
 
 /// Centraliza toda la autenticación de la app.
@@ -125,6 +126,9 @@ class AuthService {
     await SessionService.guardarFotoUrl(data['foto_url'] as String? ?? '');
     await SessionService.guardarEmail(firebaseUser.email ?? '');
     await SessionService.guardarGuest('');
+
+    // Registrar token FCM para notificaciones push
+    PushService.init().catchError((_) {});
   }
 }
 

@@ -2,7 +2,7 @@ name: mercadofoto_app
 description: "Marketplace con IA para publicación de productos desde imágenes"
 publish_to: 'none'
 
-version: 1.0.0+10
+version: 1.0.0+11
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -33,6 +33,9 @@ dependencies:
 
   # Compartir / deep-links (WhatsApp, etc.)
   url_launcher: ^6.3.0
+
+  # Notificaciones push
+  firebase_messaging: ^15.0.0
 
 dev_dependencies:
   flutter_test:

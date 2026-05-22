@@ -6,6 +6,7 @@ import 'firebase_options.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/biometric_service.dart';
+import 'services/push_service.dart';
 import 'services/session_service.dart';
 import 'theme/app_theme.dart';
 
