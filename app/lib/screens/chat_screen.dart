@@ -272,6 +272,15 @@ class _ChatScreenState extends State<ChatScreen> {
               top: false,
               child: Row(
                 children: [
+                  // Botón bajar teclado
+                  GestureDetector(
+                    onTap: () => FocusScope.of(context).unfocus(),
+                    child: const Padding(
+                      padding: EdgeInsets.only(right: 6),
+                      child: Icon(Icons.keyboard_hide_rounded,
+                          size: 22, color: AppColors.grayMid),
+                    ),
+                  ),
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(

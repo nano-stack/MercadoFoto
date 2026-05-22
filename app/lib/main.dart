@@ -28,6 +28,12 @@ class MercadoFotoApp extends StatelessWidget {
       title: 'OK Venta',
       theme: AppTheme.theme,
       home: const _AuthGate(),
+      // Toca cualquier zona fuera del teclado → baja el teclado en toda la app
+      builder: (context, child) => GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: child!,
+      ),
     );
   }
 }
