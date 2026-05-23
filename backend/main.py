@@ -710,6 +710,7 @@ def preguntar(pregunta: Pregunta):
             vendedor_id,
             "pregunta",
             f"Nueva pregunta: \"{pregunta.mensaje}\"",
+            publicacion_id=pregunta.publicacion_id,
         )
         # Push al vendedor
         try:
@@ -861,6 +862,7 @@ def actualizar_precio_publicacion(publicacion_id: int, nuevo_precio: float):
                 user_id,
                 "precio",
                 "Un producto que guardaste bajó de precio 💰",
+                publicacion_id=publicacion_id,
             )
 
     return {"mensaje": "Precio actualizado"}
@@ -1062,6 +1064,7 @@ def hacer_oferta(body: dict):
             vendedor_id,
             "oferta",
             f"Nueva oferta de ${monto:,.0f} por '{pub['titulo']}'",
+            publicacion_id=publicacion_id,
         )
         try:
             fcm_token = obtener_fcm_token(vendedor_id)
@@ -1091,6 +1094,7 @@ def registrar_interes(publicacion_id: int, comprador_id: int):
             vendedor_id,
             "interes_compra",
             f"¡Alguien quiere comprar '{pub['titulo']}'! Revisa el chat para coordinar.",
+            publicacion_id=publicacion_id,
         )
 
     return {"mensaje": "Interés registrado. El vendedor fue notificado."}

@@ -17,6 +17,7 @@ import 'mi_cuenta_screen.dart';
 import 'encontrar_screen.dart';
 import 'favoritos_screen.dart';
 import 'mensajes_screen.dart';
+import 'chat_screen.dart';
 import '../widgets/registro_form_widget.dart';
 
 // ---------------------------------------------------------------------------
@@ -1206,7 +1207,24 @@ class _NotificacionesSheetState extends State<_NotificacionesSheet> {
                         itemBuilder: (_, i) {
                           final n = _notifs[i];
                           final leida = n['leido'] == 1 || n['leido'] == true;
-                          return Container(
+                          final pubId = n['publicacion_id'];
+                          return InkWell(
+                            onTap: pubId != null ? () {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ChatScreen(
+                                    publicacionId: pubId,
+                                    tituloProducto: '',
+                                    imagenUrl: '',
+                                    vendedorId: 0,
+                                    nombreVendedor: '',
+                                  ),
+                                ),
+                              );
+                            } : null,
+                            child: Container(
                             color: leida ? Colors.transparent : AppColors.primary.withOpacity(0.05),
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             child: Row(
@@ -1250,6 +1268,7 @@ class _NotificacionesSheetState extends State<_NotificacionesSheet> {
                                   ),
                               ],
                             ),
+                          ),
                           );
                         },
                       ),
