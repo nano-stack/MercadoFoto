@@ -16,29 +16,34 @@ def init_notifications_db():
         mensaje TEXT,
         leido INTEGER DEFAULT 0,
         publicacion_id INTEGER DEFAULT NULL,
+        remitente_id INTEGER DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
 
-    # Migración: agregar columna si no existe
-    try:
-        cursor.execute("ALTER TABLE notifications ADD COLUMN publicacion_id INTEGER DEFAULT NULL")
-    except Exception:
-        pass
+    # Migraciones
+    for col, definition in [
+        ("publicacion_id", "INTEGER DEFAULT NULL"),
+        ("remitente_id",   "INTEGER DEFAULT NULL"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE notifications ADD COLUMN {col} {definition}")
+        except Exception:
+            pass
 
     conn.commit()
     conn.close()
 
 
-def crear_notificacion(user_id, tipo, mensaje, publicacion_id=None):
+def crear_notificacion(user_id, tipo, mensaje, publicacion_id=None, remitente_id=None):
 
     conn = sqlite3.connect(DB)
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO notifications (user_id, tipo, mensaje, publicacion_id)
-        VALUES (?, ?, ?, ?)
-    """, (user_id, tipo, mensaje, publicacion_id))
+        INSERT INTO notifications (user_id, tipo, mensaje, publicacion_id, remitente_id)
+        VALUES (?, ?, ?, ?, ?)
+    """, (user_id, tipo, mensaje, publicacion_id, remitente_id))
 
     conn.commit()
     conn.close()
@@ -50,7 +55,7 @@ def obtener_notificaciones(user_id):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id, tipo, mensaje, leido, created_at, publicacion_id
+        SELECT id, tipo, mensaje, leido, created_at, publicacion_id, remitente_id
         FROM notifications
         WHERE user_id = ?
         ORDER BY id DESC
@@ -69,6 +74,7 @@ def obtener_notificaciones(user_id):
             "leido":          r[3],
             "fecha":          r[4],
             "publicacion_id": r[5],
+            "remitente_id":   r[6],
         })
 
     return data

@@ -1041,6 +1041,55 @@ def ver_favoritos_completos(user_id: int):
 # INTERÉS DE COMPRA (comprador interesado → notifica vendedor)
 # --------------------------------------------------
 
+@app.post("/oferta/responder")
+def responder_oferta(body: dict):
+    """El vendedor acepta, rechaza o contraoferta. Notifica al comprador."""
+    publicacion_id = body.get("publicacion_id")
+    vendedor_id    = body.get("vendedor_id")
+    comprador_id   = body.get("comprador_id")
+    accion         = body.get("accion")  # aceptar | rechazar | contraofertar
+    monto_contra   = body.get("monto_contra")
+    mensaje_extra  = body.get("mensaje", "")
+
+    if not all([publicacion_id, vendedor_id, comprador_id, accion]):
+        raise HTTPException(status_code=400, detail="Faltan datos")
+
+    pub = obtener_publicacion_por_id(publicacion_id)
+    titulo = pub["titulo"] if pub else "tu publicación"
+
+    if accion == "aceptar":
+        msg_chat  = f"✅ Oferta aceptada"
+        msg_notif = f"¡Tu oferta fue aceptada! Coordina con el vendedor."
+        if mensaje_extra:
+            msg_chat += f" — {mensaje_extra}"
+    elif accion == "rechazar":
+        msg_chat  = f"❌ Oferta rechazada"
+        msg_notif = f"Tu oferta por '{titulo}' fue rechazada."
+        if mensaje_extra:
+            msg_chat += f" — {mensaje_extra}"
+    elif accion == "contraofertar":
+        msg_chat  = f"↩️ Contraoferta: ${float(monto_contra):,.0f}"
+        msg_notif = f"Nueva contraoferta de ${float(monto_contra):,.0f} por '{titulo}'"
+        if mensaje_extra:
+            msg_chat += f" — {mensaje_extra}"
+    else:
+        raise HTTPException(status_code=400, detail="Acción inválida")
+
+    guardar_mensaje(publicacion_id, vendedor_id, msg_chat)
+
+    crear_notificacion(comprador_id, "oferta_respuesta", msg_notif, publicacion_id=publicacion_id)
+
+    try:
+        fcm_token = obtener_fcm_token(comprador_id)
+        if fcm_token:
+            enviar_push(fcm_token, "Respuesta a tu oferta", msg_notif,
+                        {"publicacion_id": str(publicacion_id), "tipo": "oferta_respuesta"})
+    except Exception as e:
+        print(f"Push respuesta oferta error: {e}")
+
+    return {"ok": True}
+
+
 @app.post("/ofertar")
 def hacer_oferta(body: dict):
     """El comprador hace una oferta. Se guarda como mensaje de chat y se notifica al vendedor."""
@@ -1065,6 +1114,7 @@ def hacer_oferta(body: dict):
             "oferta",
             f"Nueva oferta de ${monto:,.0f} por '{pub['titulo']}'",
             publicacion_id=publicacion_id,
+            remitente_id=comprador_id,
         )
         try:
             fcm_token = obtener_fcm_token(vendedor_id)

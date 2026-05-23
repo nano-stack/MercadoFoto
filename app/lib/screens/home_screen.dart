@@ -18,6 +18,7 @@ import 'encontrar_screen.dart';
 import 'favoritos_screen.dart';
 import 'mensajes_screen.dart';
 import 'chat_screen.dart';
+import 'oferta_screen.dart';
 import '../widgets/registro_form_widget.dart';
 
 // ---------------------------------------------------------------------------
@@ -1211,18 +1212,40 @@ class _NotificacionesSheetState extends State<_NotificacionesSheet> {
                           return InkWell(
                             onTap: pubId != null ? () {
                               Navigator.pop(context);
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ChatScreen(
-                                    publicacionId: pubId,
-                                    tituloProducto: '',
-                                    imagenUrl: '',
-                                    vendedorId: 0,
-                                    nombreVendedor: '',
+                              final tipo = n['tipo'] ?? '';
+                              if (tipo == 'oferta') {
+                                // Extraer monto del mensaje: "Nueva oferta de $1,000 por '...'"
+                                final msg = n['mensaje'] ?? '';
+                                final match = RegExp(r'\$([\d,]+)').firstMatch(msg);
+                                final montoStr = (match?.group(1) ?? '0').replaceAll(',', '');
+                                final monto = double.tryParse(montoStr) ?? 0.0;
+                                final remitenteId = n['remitente_id'] ?? 0;
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => OfertaScreen(
+                                      publicacionId: pubId,
+                                      compradorId:   remitenteId,
+                                      monto:         monto,
+                                      titulo:        '',
+                                      imagenUrl:     '',
+                                    ),
                                   ),
-                                ),
-                              );
+                                );
+                              } else {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ChatScreen(
+                                      publicacionId:  pubId,
+                                      tituloProducto: '',
+                                      imagenUrl:      '',
+                                      vendedorId:     0,
+                                      nombreVendedor: '',
+                                    ),
+                                  ),
+                                );
+                              }
                             } : null,
                             child: Container(
                             color: leida ? Colors.transparent : AppColors.primary.withOpacity(0.05),

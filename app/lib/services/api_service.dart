@@ -289,4 +289,16 @@ class ApiService {
     }
     return [];
   }
+
+  static Future<Map<String, dynamic>?> obtenerPublicacion(
+      int publicacionId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/publicaciones/$publicacionId'),
+    );
+    if (response.statusCode == 200) {
+      return Map<String, dynamic>.from(
+          jsonDecode(utf8.decode(response.bodyBytes)));
+    }
+    return null;
+  }
 }
