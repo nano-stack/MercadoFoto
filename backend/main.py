@@ -121,6 +121,17 @@ from database.guest_sessions import (
     crear_guest,
 )
 
+from database.servicios import (
+    init_servicios_db,
+    crear_servicio,
+    obtener_servicios,
+    obtener_servicio_por_id,
+    obtener_servicios_usuario,
+    eliminar_servicio,
+    valorar_servicio,
+    actualizar_certificado,
+)
+
 from database.users import guardar_fcm_token, obtener_fcm_token
 from services.fcm_service import enviar_push
 
@@ -246,6 +257,7 @@ init_reviews_db()
 init_notifications_db()
 init_favoritos_db()
 init_chat_db()
+init_servicios_db()
 
 # --------------------------------------------------
 # CORS
@@ -1270,3 +1282,133 @@ async def reset_password_submit(request: Request):
     <p>Ya puedes iniciar sesión en la app OkVenta con tu nueva contraseña.</p>
     </body></html>
     """)
+
+# ==============================================================================
+# SERVICIOS
+# ==============================================================================
+
+# Detección de QR en certificados (opcional — si zxingcpp no está disponible,
+# el certificado queda como "pendiente de verificación manual")
+try:
+    import zxingcpp
+    from PIL import Image as _PilImage
+    _QR_OK = True
+except Exception:
+    _QR_OK = False
+
+
+def _tiene_qr_valido(filepath: str) -> bool:
+    """Devuelve True si la imagen contiene un QR que apunta a una URL."""
+    if not _QR_OK:
+        return False
+    try:
+        img = _PilImage.open(filepath).convert("RGB")
+        results = zxingcpp.read_barcodes(img)
+        for r in results:
+            if "QR" in r.format.name.upper() and r.text.startswith("http"):
+                return True
+    except Exception:
+        pass
+    return False
+
+
+# ── CRUD servicios ────────────────────────────────────────────────────────────
+
+@app.post("/servicios")
+async def crear_servicio_endpoint(
+    user_id:     int   = Form(...),
+    tipo:        str   = Form(...),    # 'ofrezco' | 'busco'
+    titulo:      str   = Form(...),
+    descripcion: str   = Form(""),
+    comunas:     str   = Form(""),
+    valor:       float = Form(0),
+    modalidad:   str   = Form("servicio"),  # 'hora' | 'servicio'
+    telefono:    str   = Form(""),
+    whatsapp:    str   = Form(""),
+    lat:         float = Form(None),
+    lng:         float = Form(None),
+    fotos: list[UploadFile] = File(default=[]),
+):
+    saved_paths = []
+    for foto in fotos[:2]:          # máximo 2 archivos
+        if not foto.filename:
+            continue
+        ext  = os.path.splitext(foto.filename)[1].lower() or ".jpg"
+        name = f"srv_{user_id}_{secrets.token_hex(8)}{ext}"
+        path = os.path.join(UPLOADS_DIR, name)
+        with open(path, "wb") as f:
+            f.write(await foto.read())
+        saved_paths.append(f"/uploads/{name}")
+
+    sid = crear_servicio(
+        user_id=user_id, tipo=tipo, titulo=titulo,
+        descripcion=descripcion, comunas=comunas,
+        valor=valor, modalidad=modalidad,
+        fotos=saved_paths,
+        lat=lat, lng=lng,
+        telefono=telefono, whatsapp=whatsapp,
+    )
+    return {"id": sid, "ok": True}
+
+
+@app.get("/servicios")
+def listar_servicios(tipo: str = None):
+    return obtener_servicios(tipo)
+
+
+@app.get("/servicios/usuario/{user_id}")
+def servicios_de_usuario(user_id: int):
+    return obtener_servicios_usuario(user_id)
+
+
+@app.get("/servicios/{servicio_id}")
+def detalle_servicio(servicio_id: int):
+    srv = obtener_servicio_por_id(servicio_id)
+    if not srv:
+        raise HTTPException(status_code=404, detail="Servicio no encontrado")
+    return srv
+
+
+@app.delete("/servicios/{servicio_id}")
+def borrar_servicio(servicio_id: int, user_id: int):
+    eliminar_servicio(servicio_id, user_id)
+    return {"ok": True}
+
+
+# ── Valorar ───────────────────────────────────────────────────────────────────
+
+@app.post("/servicios/{servicio_id}/valorar")
+def valorar(servicio_id: int, body: dict):
+    user_id  = body.get("user_id")
+    estrellas = int(body.get("estrellas", 5))
+    if not user_id or not (1 <= estrellas <= 5):
+        raise HTTPException(status_code=400, detail="Datos inválidos")
+    valorar_servicio(servicio_id, user_id, estrellas)
+    srv = obtener_servicio_por_id(servicio_id)
+    return {"rating": srv["rating"], "num_valoraciones": srv["num_valoraciones"]}
+
+
+# ── Certificado profesional ───────────────────────────────────────────────────
+
+@app.post("/servicios/{servicio_id}/certificado")
+async def subir_certificado(
+    servicio_id: int,
+    user_id: int = Form(...),
+    archivo: UploadFile = File(...),
+):
+    ext  = os.path.splitext(archivo.filename)[1].lower() or ".jpg"
+    name = f"cert_{servicio_id}_{secrets.token_hex(8)}{ext}"
+    path = os.path.join(UPLOADS_DIR, name)
+    with open(path, "wb") as f:
+        f.write(await archivo.read())
+
+    url        = f"/uploads/{name}"
+    verificado = _tiene_qr_valido(path)
+    actualizar_certificado(servicio_id, user_id, url, verificado)
+
+    return {
+        "url":        url,
+        "verificado": verificado,
+        "mensaje":    "Certificado validado automáticamente ✅" if verificado
+                      else "Certificado recibido. Verificación en proceso 🔄",
+    }

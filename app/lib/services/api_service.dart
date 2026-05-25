@@ -290,6 +290,20 @@ class ApiService {
     return [];
   }
 
+  static Future<List<Map<String, dynamic>>> obtenerServicios(
+      {String? tipo}) async {
+    var uri = Uri.parse('$baseUrl/servicios');
+    if (tipo != null) {
+      uri = uri.replace(queryParameters: {'tipo': tipo});
+    }
+    final response = await http.get(uri);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      return List<Map<String, dynamic>>.from(data);
+    }
+    return [];
+  }
+
   static Future<Map<String, dynamic>?> obtenerPublicacion(
       int publicacionId) async {
     final response = await http.get(

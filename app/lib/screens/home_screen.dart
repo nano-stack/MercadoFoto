@@ -19,6 +19,7 @@ import 'favoritos_screen.dart';
 import 'mensajes_screen.dart';
 import 'chat_screen.dart';
 import 'oferta_screen.dart';
+import 'servicios_screen.dart';
 import '../widgets/registro_form_widget.dart';
 
 // ---------------------------------------------------------------------------
@@ -259,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── NAVEGACIÓN ──────────────────────────────────────────────────────────────
   void _onNavTap(int index) {
-    if (index == 4) {
+    if (index == 5) {
       // Vender
       Navigator.push(
         context,
@@ -267,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ).then((_) => _inicializar());
       return;
     }
-    if (index == 3) {
+    if (index == 4) {
       // Mi OkVenta
       if (userId != null) {
         Navigator.push(
@@ -279,7 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       return;
     }
-    if (index == 2) {
+    if (index == 3) {
       // Encontrar — mapa de productos cercanos
       Navigator.push(
         context,
@@ -616,8 +617,9 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _navItem(0, Icons.home_rounded, "Inicio"),
               _navItemBadge(1, Icons.chat_bubble_outline_rounded, "Mensajes", _notifCount),
-              _navItem(2, Icons.explore_outlined, "Encontrar"),
-              _navItem(3, Icons.person_outline_rounded, "Mi OkVenta"),
+              _navItem(2, Icons.handyman_outlined, "Servicios"),
+              _navItem(3, Icons.explore_outlined, "Encontrar"),
+              _navItem(4, Icons.person_outline_rounded, "Mi OkVenta"),
               _navVender(),
             ],
           ),
@@ -632,13 +634,13 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => _onNavTap(index),
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 60,
+        width: 52,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
                 color: selected
                     ? AppColors.primary.withOpacity(0.1)
@@ -647,7 +649,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Icon(
                 icon,
-                size: 22,
+                size: 20,
                 color: selected ? AppColors.primary : AppColors.grayMid,
               ),
             ),
@@ -655,7 +657,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight:
                     selected ? FontWeight.w600 : FontWeight.w400,
                 color: selected ? AppColors.primary : AppColors.grayMid,
@@ -673,22 +675,22 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => _onNavTap(index),
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 60,
+        width: 52,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Stack(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
                     color: selected
                         ? AppColors.primary.withOpacity(0.1)
                         : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, size: 22,
+                  child: Icon(icon, size: 20,
                       color: selected ? AppColors.primary : AppColors.grayMid),
                 ),
                 if (badge > 0)
@@ -716,7 +718,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 1),
             Text(label,
                 style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 9,
                     fontWeight:
                         selected ? FontWeight.w600 : FontWeight.w400,
                     color: selected ? AppColors.primary : AppColors.grayMid)),
@@ -728,16 +730,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _navVender() {
     return GestureDetector(
-      onTap: () => _onNavTap(4),
+      onTap: () => _onNavTap(5),
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 60,
+        width: 52,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
                 color: AppColors.primary,
                 shape: BoxShape.circle,
@@ -749,7 +751,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               child: Image.asset(
                 'assets/images/logo.png',
                 fit: BoxFit.contain,
@@ -759,7 +761,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const Text(
               "Vender",
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: FontWeight.w600,
                 color: AppColors.primary,
               ),
@@ -1098,6 +1100,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   _buildInicio(),
                   const MensajesScreen(),
+                  const ServiciosScreen(),
                 ],
               ),
             ),
