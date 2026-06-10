@@ -1,9 +1,12 @@
 import sqlite3
-from config import DB_PATH
+import os
+from config import DB_DIR
+
+_DB = os.path.join(DB_DIR, "ayuda.db")
 
 
 def init_ayuda_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(_DB)
     cur = conn.cursor()
 
     cur.execute("""
@@ -34,7 +37,7 @@ def init_ayuda_db():
 
 def crear_ticket(user_id: int, tipo: str,
                  numero_referencia: str, detalle: str) -> dict:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(_DB)
     cur = conn.cursor()
 
     cur.execute("""
@@ -57,7 +60,7 @@ def crear_ticket(user_id: int, tipo: str,
 
 def agregar_mensaje(ticket_id: int, mensaje: str,
                     remitente: str = "soporte") -> bool:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(_DB)
     cur = conn.cursor()
 
     cur.execute("SELECT id FROM ayuda_tickets WHERE id = ?", (ticket_id,))
@@ -83,7 +86,7 @@ def agregar_mensaje(ticket_id: int, mensaje: str,
 
 
 def obtener_tickets_usuario(user_id: int) -> list:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(_DB)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -102,7 +105,7 @@ def obtener_tickets_usuario(user_id: int) -> list:
 
 
 def obtener_mensajes_ticket(ticket_id: int) -> list:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(_DB)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -118,7 +121,7 @@ def obtener_mensajes_ticket(ticket_id: int) -> list:
 
 
 def obtener_ticket(ticket_id: int):
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(_DB)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -129,7 +132,7 @@ def obtener_ticket(ticket_id: int):
 
 
 def cerrar_ticket(ticket_id: int) -> bool:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(_DB)
     cur = conn.cursor()
     cur.execute(
         "UPDATE ayuda_tickets SET estado = 'resuelto' WHERE id = ?",
