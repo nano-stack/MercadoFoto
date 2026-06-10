@@ -34,11 +34,18 @@ class _VentaManualScreenState extends State<VentaManualScreen> {
   List<Map<String, dynamic>> _deliveryWorkers = [];
 
   static const _categorias = [
-    'Electrónica',
     'Automotriz',
+    'Electrónica',
     'Hogar',
+    'Ropa',
+    'Deportes',
     'Ocio',
     'Mascotas',
+    'Salud',
+    'Construcción',
+    'Fotografía',
+    'Educación',
+    'Negocios',
     'General',
   ];
 

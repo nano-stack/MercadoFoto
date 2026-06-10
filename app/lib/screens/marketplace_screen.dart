@@ -42,11 +42,19 @@ class MarketplaceScreen extends StatefulWidget {
 class _MarketplaceScreenState extends State<MarketplaceScreen> {
   // ── Categorías ────────────────────────────────────────────────────────────
   static const List<Categoria> _categorias = [
-    Categoria(nombre: "Automotriz",  icono: Icons.directions_car_rounded,  subcategorias: ["Repuestos", "Autos", "Motos", "Camiones"]),
-    Categoria(nombre: "Electrónica", icono: Icons.devices_rounded,         subcategorias: ["Computación", "Impresión 3D", "Celulares", "TV"]),
-    Categoria(nombre: "Hogar",       icono: Icons.weekend_rounded,         subcategorias: ["Muebles", "Decoración", "Electrodomésticos"]),
-    Categoria(nombre: "Ocio",        icono: Icons.sports_soccer_rounded,   subcategorias: ["Deportes", "Juguetes", "Entretenimiento"]),
-    Categoria(nombre: "Mascotas",    icono: Icons.pets_rounded,            subcategorias: ["Alimentos", "Accesorios", "Servicios"]),
+    Categoria(nombre: "Automotriz",   icono: Icons.directions_car_rounded,       subcategorias: ["Repuestos", "Autos", "Motos", "Camiones"]),
+    Categoria(nombre: "Electrónica",  icono: Icons.devices_rounded,              subcategorias: ["Computación", "Celulares", "TV", "Cámaras"]),
+    Categoria(nombre: "Hogar",        icono: Icons.weekend_rounded,              subcategorias: ["Muebles", "Decoración", "Electrodomésticos"]),
+    Categoria(nombre: "Ropa",         icono: Icons.checkroom_outlined,           subcategorias: ["Hombre", "Mujer", "Niños", "Accesorios"]),
+    Categoria(nombre: "Deportes",     icono: Icons.fitness_center_rounded,       subcategorias: ["Equipamiento", "Ropa Deportiva", "Bicicletas"]),
+    Categoria(nombre: "Ocio",         icono: Icons.sports_soccer_rounded,        subcategorias: ["Juguetes", "Entretenimiento", "Música"]),
+    Categoria(nombre: "Mascotas",     icono: Icons.pets_rounded,                 subcategorias: ["Alimentos", "Accesorios", "Servicios"]),
+    Categoria(nombre: "Salud",        icono: Icons.health_and_safety_outlined,   subcategorias: ["Equipos Médicos", "Belleza", "Bienestar"]),
+    Categoria(nombre: "Construcción", icono: Icons.construction_outlined,        subcategorias: ["Herramientas", "Materiales", "Equipos"]),
+    Categoria(nombre: "Fotografía",   icono: Icons.camera_alt_outlined,          subcategorias: ["Cámaras", "Lentes", "Iluminación", "Trípodes"]),
+    Categoria(nombre: "Educación",    icono: Icons.menu_book_outlined,           subcategorias: ["Libros", "Cursos", "Instrumentos"]),
+    Categoria(nombre: "Negocios",     icono: Icons.business_center_outlined,     subcategorias: ["Equipos", "Mobiliario", "Tecnología"]),
+    Categoria(nombre: "General",      icono: Icons.category_rounded,             subcategorias: ["Otros"]),
   ];
   String? _categoriaSeleccionada;
   String? _subcategoriaSeleccionada;

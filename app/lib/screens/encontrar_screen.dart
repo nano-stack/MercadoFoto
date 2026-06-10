@@ -1005,16 +1005,19 @@ class _EncontrarScreenState extends State<EncontrarScreen>
 
   IconData _iconoCategoria(String cat) {
     const map = <String, IconData>{
-      'Electrónica':  Icons.computer_outlined,
+      'Electrónica':  Icons.devices_outlined,
       'Automotriz':   Icons.directions_car_outlined,
       'Hogar':        Icons.home_outlined,
-      'Ocio':         Icons.sports_esports_outlined,
-      'Mascotas':     Icons.pets_outlined,
-      'General':      Icons.category_outlined,
       'Ropa':         Icons.checkroom_outlined,
       'Deportes':     Icons.fitness_center_outlined,
-      'Juguetes':     Icons.toys_outlined,
-      'Libros':       Icons.menu_book_outlined,
+      'Ocio':         Icons.sports_esports_outlined,
+      'Mascotas':     Icons.pets_outlined,
+      'Salud':        Icons.health_and_safety_outlined,
+      'Construcción': Icons.construction_outlined,
+      'Fotografía':   Icons.camera_alt_outlined,
+      'Educación':    Icons.menu_book_outlined,
+      'Negocios':     Icons.business_center_outlined,
+      'General':      Icons.category_outlined,
     };
     return map[cat] ?? Icons.more_horiz_rounded;
   }

@@ -610,17 +610,20 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+        child: SizedBox(
+          height: 62,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _navItem(0, Icons.home_rounded, "Inicio"),
-              _navItemBadge(1, Icons.chat_bubble_outline_rounded, "Mensajes", _notifCount),
-              _navItem(2, Icons.handyman_outlined, "Servicios"),
-              _navItem(3, Icons.explore_outlined, "Encontrar"),
-              _navItem(4, Icons.person_outline_rounded, "Mi OkVenta"),
+              // Inicio
+              Expanded(child: _navItem(0, Icons.home_rounded, "Inicio")),
+              // Mensajes
+              Expanded(child: _navItemBadge(1, Icons.chat_bubble_outline_rounded, "Mensajes", _notifCount)),
+              // Vender — CENTRO, más grande
               _navVender(),
+              // Encontrar
+              Expanded(child: _navItem(3, Icons.explore_outlined, "Encontrar")),
+              // Mi OkVenta
+              Expanded(child: _navItem(4, Icons.person_outline_rounded, "Mi OkVenta")),
             ],
           ),
         ),
@@ -733,37 +736,45 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => _onNavTap(5),
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 52,
+        width: 72,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.35),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.all(8),
-              child: Image.asset(
-                'assets/images/logo.png',
-                fit: BoxFit.contain,
+            // Círculo elevado por encima de la barra
+            Transform.translate(
+              offset: const Offset(0, -10),
+              child: Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.surface, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.45),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(12),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
-            const SizedBox(height: 1),
-            const Text(
-              "Vender",
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
+            Transform.translate(
+              offset: const Offset(0, -8),
+              child: const Text(
+                "Vender",
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
               ),
             ),
           ],

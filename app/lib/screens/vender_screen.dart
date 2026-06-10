@@ -73,9 +73,18 @@ class _VenderScreenState extends State<VenderScreen> {
       if (response.statusCode == 200) {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) =>
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) =>
                 ConfirmacionScreen(data: respStr, imagen: imagen),
+            transitionsBuilder: (_, animation, __, child) => SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, -1), // entra desde arriba
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                  parent: animation, curve: Curves.easeOutCubic)),
+              child: child,
+            ),
+            transitionDuration: const Duration(milliseconds: 380),
           ),
         );
       } else {
