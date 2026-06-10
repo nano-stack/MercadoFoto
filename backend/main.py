@@ -167,6 +167,16 @@ from services.blue_express_service import buscar_puntos as be_buscar_puntos
 from database.users import guardar_fcm_token, obtener_fcm_token
 from services.fcm_service import enviar_push
 
+from database.ayuda import (
+    init_ayuda_db,
+    crear_ticket,
+    agregar_mensaje,
+    obtener_tickets_usuario,
+    obtener_mensajes_ticket,
+    obtener_ticket,
+    cerrar_ticket,
+)
+
 # --------------------------------------------------
 # CATEGORIZACIÓN AUTOMÁTICA (keyword-based, sin dependencias externas)
 # --------------------------------------------------
@@ -292,6 +302,7 @@ init_chat_db()
 init_ordenes_db()
 init_servicios_db()
 init_delivery_db()
+init_ayuda_db()
 
 # --------------------------------------------------
 # CORS
@@ -1575,6 +1586,136 @@ def puntos_blue_express(comuna: str = "", limite: int = 5):
     """
     resultados = be_buscar_puntos(comuna, limite=min(limite, 10))
     return {"puntos": resultados, "total": len(resultados)}
+
+
+# ── Ayuda / Soporte ───────────────────────────────────────────────────────────
+
+import threading
+import requests as _requests
+
+def _notificar_n8n(ticket_id: int, user_id: int, tipo: str,
+                   numero_referencia: str, detalle: str):
+    """Llama al webhook de n8n en background (no bloquea la respuesta)."""
+    webhook_url = os.environ.get("N8N_WEBHOOK_AYUDA", "")
+    if not webhook_url:
+        return
+    try:
+        _requests.post(webhook_url, json={
+            "ticket_id":         ticket_id,
+            "user_id":           user_id,
+            "tipo":              tipo,
+            "numero_referencia": numero_referencia,
+            "detalle":           detalle,
+        }, timeout=8)
+    except Exception:
+        pass  # no interrumpir si n8n no responde
+
+
+@app.post("/ayuda")
+def crear_ticket_ayuda(body: dict):
+    user_id           = body.get("user_id")
+    tipo              = body.get("tipo", "otros")
+    numero_referencia = body.get("numero_referencia", "")
+    detalle           = body.get("detalle", "")
+
+    if not user_id or not detalle:
+        raise HTTPException(status_code=400, detail="Faltan campos obligatorios")
+
+    resultado = crear_ticket(user_id, tipo, numero_referencia, detalle)
+
+    # Notificar a n8n en hilo aparte
+    threading.Thread(
+        target=_notificar_n8n,
+        args=(resultado["id"], user_id, tipo, numero_referencia, detalle),
+        daemon=True,
+    ).start()
+
+    return {"ok": True, "ticket_id": resultado["id"], "estado": resultado["estado"]}
+
+
+@app.get("/ayuda/usuario/{user_id}")
+def tickets_usuario(user_id: int):
+    tickets = obtener_tickets_usuario(user_id)
+    return {"tickets": tickets}
+
+
+@app.get("/ayuda/{ticket_id}/mensajes")
+def mensajes_ticket(ticket_id: int):
+    ticket = obtener_ticket(ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+    mensajes = obtener_mensajes_ticket(ticket_id)
+    return {"ticket": ticket, "mensajes": mensajes}
+
+
+@app.post("/ayuda/{ticket_id}/mensaje_usuario")
+def mensaje_usuario(ticket_id: int, body: dict):
+    """El usuario envía un follow-up desde la app."""
+    mensaje = body.get("mensaje", "").strip()
+    if not mensaje:
+        raise HTTPException(status_code=400, detail="Mensaje vacío")
+    ok = agregar_mensaje(ticket_id, mensaje, remitente="usuario")
+    if not ok:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+
+    # Reenviar a n8n para que notifique al soporte
+    ticket = obtener_ticket(ticket_id)
+    webhook_url = os.environ.get("N8N_WEBHOOK_AYUDA", "")
+    if webhook_url and ticket:
+        threading.Thread(
+            target=_notificar_n8n,
+            args=(ticket_id, ticket["user_id"], ticket["tipo"],
+                  ticket["numero_referencia"] or "", f"[FOLLOW-UP] {mensaje}"),
+            daemon=True,
+        ).start()
+
+    return {"ok": True}
+
+
+@app.post("/ayuda/{ticket_id}/respuesta")
+def respuesta_soporte(ticket_id: int, body: dict, request: Request):
+    """
+    Llamado por n8n cuando el admin responde en Telegram.
+    Protegido con header X-N8N-Secret.
+    """
+    secret = os.environ.get("N8N_SECRET", "")
+    if secret and request.headers.get("X-N8N-Secret") != secret:
+        raise HTTPException(status_code=401, detail="No autorizado")
+
+    mensaje = body.get("mensaje", "").strip()
+    if not mensaje:
+        raise HTTPException(status_code=400, detail="Mensaje vacío")
+
+    ok = agregar_mensaje(ticket_id, mensaje, remitente="soporte")
+    if not ok:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+
+    # Notificación push al usuario (si tiene token FCM)
+    ticket = obtener_ticket(ticket_id)
+    if ticket:
+        fcm_tok = obtener_fcm_token(ticket["user_id"])
+        if fcm_tok:
+            try:
+                enviar_push(fcm_tok, "💬 Respuesta de soporte OkVenta",
+                            mensaje[:120],
+                            {"tipo": "ayuda_respuesta",
+                             "ticket_id": str(ticket_id)})
+            except Exception:
+                pass
+
+    return {"ok": True}
+
+
+@app.patch("/ayuda/{ticket_id}/cerrar")
+def cerrar_ticket_endpoint(ticket_id: int, body: dict):
+    user_id = body.get("user_id")
+    ticket  = obtener_ticket(ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+    if user_id and ticket["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+    cerrar_ticket(ticket_id)
+    return {"ok": True}
 
 
 # ==============================================================================

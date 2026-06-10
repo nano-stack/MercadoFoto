@@ -420,4 +420,70 @@ class ApiService {
     );
     return response.statusCode == 200;
   }
+
+  // ── Ayuda / Soporte ────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> crearTicketAyuda({
+    required int userId,
+    required String tipo,
+    String numeroReferencia = '',
+    required String detalle,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/ayuda'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'user_id':           userId,
+        'tipo':              tipo,
+        'numero_referencia': numeroReferencia,
+        'detalle':           detalle,
+      }),
+    );
+    if (response.statusCode == 200) {
+      return Map<String, dynamic>.from(
+          jsonDecode(utf8.decode(response.bodyBytes)));
+    }
+    throw Exception('Error al crear ticket de ayuda');
+  }
+
+  static Future<List<Map<String, dynamic>>> obtenerTicketsAyuda(
+      int userId) async {
+    final response =
+        await http.get(Uri.parse('$baseUrl/ayuda/usuario/$userId'));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      return List<Map<String, dynamic>>.from(data['tickets'] ?? []);
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>> obtenerMensajesTicket(
+      int ticketId) async {
+    final response =
+        await http.get(Uri.parse('$baseUrl/ayuda/$ticketId/mensajes'));
+    if (response.statusCode == 200) {
+      return Map<String, dynamic>.from(
+          jsonDecode(utf8.decode(response.bodyBytes)));
+    }
+    return {};
+  }
+
+  static Future<bool> enviarMensajeTicket(
+      int ticketId, String mensaje) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/ayuda/$ticketId/mensaje_usuario'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'mensaje': mensaje}),
+    );
+    return response.statusCode == 200;
+  }
+
+  static Future<bool> cerrarTicketAyuda(int ticketId, int userId) async {
+    final response = await http.patch(
+      Uri.parse('$baseUrl/ayuda/$ticketId/cerrar'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'user_id': userId}),
+    );
+    return response.statusCode == 200;
+  }
 }

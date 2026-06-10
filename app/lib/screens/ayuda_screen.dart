@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
+import '../services/session_service.dart';
 import '../theme/app_theme.dart';
+import 'ayuda_chat_screen.dart';
 
 // ── Tipos de consulta ─────────────────────────────────────────────────────────
 
@@ -60,7 +63,16 @@ class _AyudaScreenState extends State<AyudaScreen> {
   final _detalleCtrl  = TextEditingController();
   final _formKey      = GlobalKey<FormState>();
   bool _enviando      = false;
-  bool _enviado       = false;
+
+  int? _userId;
+  List<Map<String, dynamic>> _tickets = [];
+  bool _cargandoTickets = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
 
   @override
   void dispose() {
@@ -69,27 +81,70 @@ class _AyudaScreenState extends State<AyudaScreen> {
     super.dispose();
   }
 
+  Future<void> _init() async {
+    _userId = await SessionService.obtenerUser();
+    if (_userId != null) _cargarTickets();
+  }
+
+  Future<void> _cargarTickets() async {
+    if (_userId == null) return;
+    setState(() => _cargandoTickets = true);
+    try {
+      final t = await ApiService.obtenerTicketsAyuda(_userId!);
+      if (mounted) setState(() => _tickets = t);
+    } catch (_) {}
+    if (mounted) setState(() => _cargandoTickets = false);
+  }
+
   void _seleccionar(_TipoAyuda tipo) {
     setState(() {
       _tipoSeleccionado = tipo;
       _numeroCtrl.clear();
       _detalleCtrl.clear();
-      _enviado = false;
     });
   }
 
   Future<void> _enviar() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debes iniciar sesión para enviar una consulta')));
+      return;
+    }
     setState(() => _enviando = true);
-
-    // TODO: conectar con endpoint o email de soporte
-    await Future.delayed(const Duration(milliseconds: 900));
-
-    if (mounted) {
-      setState(() {
-        _enviando = false;
-        _enviado  = true;
-      });
+    try {
+      final result = await ApiService.crearTicketAyuda(
+        userId:           _userId!,
+        tipo:             _tipoSeleccionado!.name,
+        numeroReferencia: _numeroCtrl.text.trim(),
+        detalle:          _detalleCtrl.text.trim(),
+      );
+      if (!mounted) return;
+      final ticketId = result['ticket_id'] as int;
+      // Navegar directo al chat del ticket
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AyudaChatScreen(
+            ticketId:         ticketId,
+            tipo:             _tipoSeleccionado!.name,
+            numeroReferencia: _numeroCtrl.text.trim(),
+          ),
+        ),
+      );
+      // Al volver, recargar lista de tickets y limpiar form
+      _tipoSeleccionado = null;
+      _numeroCtrl.clear();
+      _detalleCtrl.clear();
+      _cargarTickets();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Error al enviar. Verifica tu conexión.')));
+      }
+    } finally {
+      if (mounted) setState(() => _enviando = false);
     }
   }
 
@@ -179,16 +234,42 @@ class _AyudaScreenState extends State<AyudaScreen> {
 
                     const SizedBox(height: 24),
 
-                    // ── Formulario (visible solo si hay tipo seleccionado) ──
-                    if (_tipoSeleccionado != null) ...[
+                    // ── Formulario ─────────────────────────────────────────
+                    if (_tipoSeleccionado != null)
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 250),
-                        child: _enviado
-                            ? _buildConfirmacion()
-                            : _buildFormulario(),
-                      ),
-                    ] else
+                        child: _buildFormulario(),
+                      )
+                    else
                       _buildEstadoInicial(),
+
+                    // ── Consultas anteriores ───────────────────────────────
+                    if (_tickets.isNotEmpty) ...[
+                      const SizedBox(height: 28),
+                      const Text('Mis consultas anteriores',
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary)),
+                      const SizedBox(height: 10),
+                      ..._tickets.map((t) => _TarjetaTicket(
+                            ticket: t,
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AyudaChatScreen(
+                                    ticketId: t['id'] as int,
+                                    tipo:     t['tipo'] as String,
+                                    numeroReferencia:
+                                        t['numero_referencia'] as String?,
+                                  ),
+                                ),
+                              );
+                              _cargarTickets();
+                            },
+                          )),
+                    ],
                   ],
                 ),
               ),
@@ -308,57 +389,6 @@ class _AyudaScreenState extends State<AyudaScreen> {
                 elevation: 0,
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Confirmación de envío ──────────────────────────────────────────────────
-  Widget _buildConfirmacion() {
-    return Container(
-      key: const ValueKey('confirmacion'),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.green.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 56, height: 56,
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.check_circle_rounded,
-                color: Colors.green, size: 32),
-          ),
-          const SizedBox(height: 14),
-          const Text('¡Solicitud enviada!',
-              style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary)),
-          const SizedBox(height: 8),
-          const Text(
-            'Recibimos tu consulta. Nuestro equipo de soporte\nse pondrá en contacto contigo a la brevedad.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                fontSize: 13, color: AppColors.grayMid, height: 1.5),
-          ),
-          const SizedBox(height: 20),
-          TextButton.icon(
-            onPressed: () => setState(() {
-              _tipoSeleccionado = null;
-              _enviado = false;
-              _numeroCtrl.clear();
-              _detalleCtrl.clear();
-            }),
-            icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
-            label: const Text('Nueva consulta'),
-            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
           ),
         ],
       ),
@@ -494,6 +524,121 @@ class _TarjetaTipo extends StatelessWidget {
             if (seleccionado)
               const Icon(Icons.check_circle_rounded,
                   size: 16, color: AppColors.primary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Tarjeta de ticket previo ───────────────────────────────────────────────────
+
+class _TarjetaTicket extends StatelessWidget {
+  final Map<String, dynamic> ticket;
+  final VoidCallback onTap;
+  const _TarjetaTicket({required this.ticket, required this.onTap});
+
+  static const _tipoLabels = {
+    'pedido':   '📦 Pedido',
+    'venta':    '🏪 Venta',
+    'servicio': '🔧 Servicio',
+    'otros':    '❓ Consulta',
+  };
+
+  Color _estadoColor(String estado) {
+    switch (estado) {
+      case 'en_proceso': return Colors.orange;
+      case 'resuelto':   return Colors.green;
+      default:           return AppColors.primary;
+    }
+  }
+
+  String _estadoLabel(String estado) {
+    switch (estado) {
+      case 'en_proceso': return 'En proceso';
+      case 'resuelto':   return 'Resuelto';
+      default:           return 'Abierto';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final estado     = ticket['estado'] as String? ?? 'abierto';
+    final tipo       = ticket['tipo'] as String? ?? 'otros';
+    final detalle    = ticket['detalle'] as String? ?? '';
+    final respuestas = ticket['respuestas'] as int? ?? 0;
+    final color      = _estadoColor(estado);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: respuestas > 0 ? color.withOpacity(0.4) : AppColors.divider,
+            width: respuestas > 0 ? 1.5 : 0.8,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(_tipoLabels[tipo] ?? tipo,
+                          style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary)),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(_estadoLabel(estado),
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: color)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(detalle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.grayMid)),
+                  if (respuestas > 0) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.reply_rounded,
+                            size: 13, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$respuestas respuesta${respuestas > 1 ? 's' : ''} de soporte',
+                          style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Icon(Icons.arrow_forward_ios_rounded,
+                size: 13, color: AppColors.grayMid),
           ],
         ),
       ),
