@@ -843,6 +843,7 @@ class _MapaServicios extends StatefulWidget {
 
 class _MapaServiciosState extends State<_MapaServicios> {
   bool    _guardando        = false;
+  bool    _panelAbierto     = false;
   String? _filtroTipo;       // null = todos | 'ofrezco' | 'busco'
   String? _filtroCategoria;  // null = todas | nombre de categoría
 
@@ -1082,13 +1083,15 @@ class _MapaServiciosState extends State<_MapaServicios> {
     );
   }
 
-  // ── Panel de filtros lateral izquierdo ────────────────────────────────────
+  // ── Panel de filtros lateral izquierdo (colapsable) ──────────────────────
   Widget _buildFiltroPanel() {
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.55,
       ),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeInOut,
         width: 88,
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.95),
@@ -1105,86 +1108,107 @@ class _MapaServiciosState extends State<_MapaServicios> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 7),
-                color: AppColors.carbon,
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.tune_rounded,
-                        size: 12, color: Colors.white),
-                    SizedBox(width: 4),
-                    Text('Filtrar',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white)),
-                  ],
-                ),
-              ),
-
-              // Tipo
-              _fBtn(null, Icons.apps_rounded, 'Todos',
-                  _filtroTipo == null, AppColors.carbon),
-              _fBtn('ofrezco', Icons.handyman_outlined, 'Ofrezco',
-                  _filtroTipo == 'ofrezco', AppColors.primary),
-              _fBtn('busco', Icons.search_rounded, 'Busco',
-                  _filtroTipo == 'busco', Colors.orange),
-
-              Container(height: 0.5, color: AppColors.divider),
-
-              // Categorías (scrollable)
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: _kCategorias.map((cat) {
-                      final icon =
-                          _kCategoriaIconos[cat] ?? Icons.more_horiz_rounded;
-                      final sel = _filtroCategoria == cat;
-                      return InkWell(
-                        onTap: () => setState(() {
-                          _filtroCategoria = sel ? null : cat;
-                        }),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 6),
-                          color: sel
-                              ? AppColors.primary.withOpacity(0.1)
-                              : null,
-                          child: Column(
-                            children: [
-                              Icon(icon,
-                                  size: 16,
-                                  color: sel
-                                      ? AppColors.primary
-                                      : AppColors.grayMid),
-                              const SizedBox(height: 2),
-                              Text(
-                                cat.length > 8
-                                    ? '${cat.substring(0, 7)}…'
-                                    : cat,
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: sel
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
-                                  color: sel
-                                      ? AppColors.primary
-                                      : AppColors.grayMid,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
+              // Header — toca para expandir/colapsar
+              GestureDetector(
+                onTap: () => setState(() {
+                  _panelAbierto = !_panelAbierto;
+                  if (!_panelAbierto) {
+                    _filtroTipo      = null;
+                    _filtroCategoria = null;
+                  }
+                }),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 7),
+                  color: AppColors.carbon,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.tune_rounded,
+                          size: 12, color: Colors.white),
+                      const SizedBox(width: 4),
+                      const Expanded(
+                        child: Text('Filtrar',
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white)),
+                      ),
+                      Icon(
+                        _panelAbierto
+                            ? Icons.expand_less_rounded
+                            : Icons.expand_more_rounded,
+                        size: 13,
+                        color: Colors.white70,
+                      ),
+                    ],
                   ),
                 ),
               ),
+
+              // Contenido — solo visible cuando el panel está abierto
+              if (_panelAbierto) ...[
+                // Filtro por tipo
+                _fBtn(null, Icons.apps_rounded, 'Todos',
+                    _filtroTipo == null, AppColors.carbon),
+                _fBtn('ofrezco', Icons.handyman_outlined, 'Ofrezco',
+                    _filtroTipo == 'ofrezco', AppColors.primary),
+                _fBtn('busco', Icons.search_rounded, 'Busco',
+                    _filtroTipo == 'busco', Colors.orange),
+
+                Container(height: 0.5, color: AppColors.divider),
+
+                // Categorías (scrollable)
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: _kCategorias.map((cat) {
+                        final icon =
+                            _kCategoriaIconos[cat] ?? Icons.more_horiz_rounded;
+                        final sel = _filtroCategoria == cat;
+                        return InkWell(
+                          onTap: () => setState(() {
+                            _filtroCategoria = sel ? null : cat;
+                          }),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 6),
+                            color: sel
+                                ? AppColors.primary.withOpacity(0.1)
+                                : null,
+                            child: Column(
+                              children: [
+                                Icon(icon,
+                                    size: 16,
+                                    color: sel
+                                        ? AppColors.primary
+                                        : AppColors.grayMid),
+                                const SizedBox(height: 2),
+                                Text(
+                                  cat.length > 8
+                                      ? '${cat.substring(0, 7)}…'
+                                      : cat,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: sel
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                    color: sel
+                                        ? AppColors.primary
+                                        : AppColors.grayMid,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
