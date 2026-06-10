@@ -162,6 +162,8 @@ from database.delivery import (
     actualizar_ubicacion_delivery,
 )
 
+from services.blue_express_service import buscar_puntos as be_buscar_puntos
+
 from database.users import guardar_fcm_token, obtener_fcm_token
 from services.fcm_service import enviar_push
 
@@ -1562,6 +1564,17 @@ def ubicacion_delivery(delivery_id: int, body: dict):
         raise HTTPException(status_code=400, detail="Datos incompletos")
     actualizar_ubicacion_delivery(delivery_id, user_id, lat, lng, radio_km)
     return {"ok": True}
+
+
+# ── Blue Express ─────────────────────────────────────────────────────────────
+
+@app.get("/blue-express/puntos")
+def puntos_blue_express(comuna: str = "", limite: int = 5):
+    """
+    Devuelve hasta `limite` puntos de despacho Blue Express filtrados por comuna.
+    """
+    resultados = be_buscar_puntos(comuna, limite=min(limite, 10))
+    return {"puntos": resultados, "total": len(resultados)}
 
 
 # ==============================================================================

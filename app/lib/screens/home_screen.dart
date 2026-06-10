@@ -777,19 +777,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return SingleChildScrollView(
       child: Column(
         children: [
-          // Banner
-          Container(
-            margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-            height: 130,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              color: AppColors.carbon,
-              image: const DecorationImage(
-                image: AssetImage("assets/images/banner_publicidad.jpg"),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
+          // Banner animado
+          const _BannerCarrusel(),
           const SizedBox(height: 8),
           MarketplaceScreen(
             miLat: _miPosicion?.latitude,
@@ -1106,6 +1095,272 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             if (_tab == 0) _buildSliderRadio(),
             _buildBottomNav(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Banner animado ────────────────────────────────────────────────────────────
+
+class _BannerCarrusel extends StatefulWidget {
+  const _BannerCarrusel();
+
+  @override
+  State<_BannerCarrusel> createState() => _BannerCarruselState();
+}
+
+class _BannerCarruselState extends State<_BannerCarrusel> {
+  final _controller = PageController();
+  int _paginaActual = 0;
+  Timer? _timer;
+
+  static const _duracion = Duration(seconds: 4);
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(_duracion, (_) {
+      if (!mounted) return;
+      final siguiente = (_paginaActual + 1) % 2;
+      _controller.animateToPage(
+        siguiente,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          height: 130,
+          child: PageView(
+            controller: _controller,
+            onPageChanged: (i) => setState(() => _paginaActual = i),
+            children: const [
+              _BannerOkVenta(),
+              _BannerBlueExpress(),
+            ],
+          ),
+        ),
+        // Indicadores de página
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(2, (i) {
+            final activo = i == _paginaActual;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: activo ? 18 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: activo ? AppColors.primary : AppColors.grayMid.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Banner OkVenta ─────────────────────────────────────────────────────────────
+
+class _BannerOkVenta extends StatelessWidget {
+  const _BannerOkVenta();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Imagen de fondo
+          Image.asset(
+            'assets/images/banner_publicidad.jpg',
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(color: AppColors.carbon),
+          ),
+          // Overlay degradado
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  AppColors.carbon.withOpacity(0.75),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+          // Texto
+          const Positioned(
+            left: 18,
+            top: 20,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'OkVenta',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'El marketplace\nde tu comunidad',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Banner Blue Express ────────────────────────────────────────────────────────
+
+class _BannerBlueExpress extends StatelessWidget {
+  const _BannerBlueExpress();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF0057B8), Color(0xFF00AEEF)],
+          ),
+        ),
+        child: Stack(
+          children: [
+            // Círculos decorativos
+            Positioned(
+              right: -30,
+              top: -30,
+              child: Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.07),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 20,
+              bottom: -40,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.07),
+                ),
+              ),
+            ),
+
+            // Contenido
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo simulado (texto)
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.local_shipping_rounded,
+                                color: Color(0xFF0057B8), size: 16),
+                            SizedBox(width: 5),
+                            Text(
+                              'Blue Express',
+                              style: TextStyle(
+                                color: Color(0xFF0057B8),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Despacho a todo Chile',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Envía tu producto al comprador\ndesde el punto más cercano',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      height: 1.4,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Ícono grande derecha
+            const Positioned(
+              right: 16,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: Icon(
+                  Icons.inventory_2_outlined,
+                  color: Colors.white,
+                  size: 52,
+                ),
+              ),
+            ),
           ],
         ),
       ),

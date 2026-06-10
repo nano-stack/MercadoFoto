@@ -11,6 +11,7 @@ import '../services/api_service.dart';
 import '../services/session_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/space_invaders_widget.dart';
+import '../widgets/blue_express_sheet.dart';
 import 'mis_publicaciones_screen.dart';
 
 // ── Modelo Talla de envío ─────────────────────────────────────────────────
@@ -118,8 +119,10 @@ class _ConfirmacionScreenState extends State<ConfirmacionScreen> {
   final _pesoCtrl  = TextEditingController();
 
   // ── Delivery ──────────────────────────────────────────────────────────
-  /// null = yo hago la entrega; non-null = id del delivery OkVenta
+  /// 'yo' | 'okventa' | 'blueexpress'
+  String _metodoEntrega = 'yo';
   int? _deliveryId;
+  Map<String, dynamic>? _blueExpressPunto;
   List<Map<String, dynamic>> _deliveryWorkers = [];
   bool _cargandoDelivery = false;
 
@@ -1004,9 +1007,9 @@ class _ConfirmacionScreenState extends State<ConfirmacionScreen> {
 
   // ── DELIVERY SELECTOR ────────────────────────────────────────────────────
   Widget _buildDeliverySection() {
-    final selectedWorker = _deliveryId == null
-        ? null
-        : _deliveryWorkers.where((d) => d['id'] == _deliveryId).firstOrNull;
+    final selectedWorker = _metodoEntrega == 'okventa' && _deliveryId != null
+        ? _deliveryWorkers.where((d) => d['id'] == _deliveryId).firstOrNull
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1024,154 +1027,119 @@ class _ConfirmacionScreenState extends State<ConfirmacionScreen> {
         ),
 
         // Opción 1: Yo entrego
-        GestureDetector(
-          onTap: () => setState(() => _deliveryId = null),
-          child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            margin: const EdgeInsets.only(bottom: 8),
-            decoration: BoxDecoration(
-              color: _deliveryId == null
-                  ? AppColors.primary.withOpacity(0.08)
-                  : AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _deliveryId == null
-                    ? AppColors.primary
-                    : AppColors.divider,
-                width: _deliveryId == null ? 1.5 : 0.5,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.person_outline,
-                    color: _deliveryId == null
-                        ? AppColors.primary
-                        : AppColors.grayMid),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Yo hago la entrega',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary)),
-                      Text('Me encargo personalmente del envío',
-                          style: TextStyle(
-                              fontSize: 12, color: AppColors.grayMid)),
-                    ],
-                  ),
-                ),
-                if (_deliveryId == null)
-                  const Icon(Icons.check_circle_rounded,
-                      color: AppColors.primary, size: 20),
-              ],
-            ),
-          ),
+        _opcionEntrega(
+          activo: _metodoEntrega == 'yo',
+          icon: Icons.person_outline,
+          iconColor: AppColors.primary,
+          titulo: 'Yo hago la entrega',
+          subtitulo: 'Me encargo personalmente del envío',
+          onTap: () => setState(() {
+            _metodoEntrega = 'yo';
+            _deliveryId = null;
+            _blueExpressPunto = null;
+          }),
         ),
 
-        // Opción 2: Elegir delivery OkVenta
-        if (_cargandoDelivery)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Center(
-                child:
-                    CircularProgressIndicator(color: AppColors.primary)),
-          )
-        else if (_deliveryWorkers.isEmpty)
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.grayMid.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.divider, width: 0.5),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.delivery_dining_outlined,
-                    color: AppColors.grayMid),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Sin deliveries OkVenta disponibles por el momento',
-                    style: TextStyle(
-                        fontSize: 13, color: AppColors.grayMid),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          GestureDetector(
-            onTap: () => _mostrarSelectorDelivery(),
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: _deliveryId != null
-                    ? Colors.green.withOpacity(0.06)
-                    : AppColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _deliveryId != null
-                      ? Colors.green.withOpacity(0.5)
-                      : AppColors.divider,
-                  width: 0.5,
-                ),
-              ),
-              child: Row(
+        const SizedBox(height: 8),
+
+        // Opción 2: Delivery OkVenta
+        _opcionEntrega(
+          activo: _metodoEntrega == 'okventa',
+          icon: Icons.delivery_dining_rounded,
+          iconColor: Colors.green,
+          titulo: _metodoEntrega == 'okventa' && selectedWorker != null
+              ? selectedWorker['nombre'] as String? ?? 'Delivery OkVenta'
+              : 'Delivery OkVenta',
+          subtitulo: _metodoEntrega == 'okventa' && selectedWorker != null
+              ? '${selectedWorker['tipo_vehiculo'] ?? ''} • radio ${(selectedWorker['radio_km'] as num?)?.toStringAsFixed(0) ?? '5'} km'
+              : 'Seleccionar de la red OkVenta',
+          trailing: const Icon(Icons.chevron_right, color: AppColors.grayMid, size: 18),
+          onTap: () {
+            setState(() => _metodoEntrega = 'okventa');
+            if (_deliveryWorkers.isNotEmpty) _mostrarSelectorDelivery();
+          },
+        ),
+
+        const SizedBox(height: 8),
+
+        // Opción 3: Blue Express
+        _opcionEntrega(
+          activo: _metodoEntrega == 'blueexpress',
+          icon: Icons.local_shipping_rounded,
+          iconColor: const Color(0xFF0057B8),
+          titulo: _metodoEntrega == 'blueexpress' && _blueExpressPunto != null
+              ? _blueExpressPunto!['nombre'] as String? ?? 'Blue Express'
+              : 'Blue Express',
+          subtitulo: _metodoEntrega == 'blueexpress' && _blueExpressPunto != null
+              ? _blueExpressPunto!['direccion'] as String? ?? ''
+              : 'Despacho a todo Chile — buscar punto',
+          trailing: const Icon(Icons.chevron_right, color: AppColors.grayMid, size: 18),
+          onTap: () async {
+            setState(() => _metodoEntrega = 'blueexpress');
+            final punto = await showModalBottomSheet<Map<String, dynamic>>(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => const BlueExpressSheet(),
+            );
+            if (punto != null && mounted) {
+              setState(() => _blueExpressPunto = punto);
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _opcionEntrega({
+    required bool activo,
+    required IconData icon,
+    required Color iconColor,
+    required String titulo,
+    required String subtitulo,
+    Widget? trailing,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: activo ? iconColor.withOpacity(0.06) : AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: activo ? iconColor.withOpacity(0.5) : AppColors.divider,
+            width: activo ? 1.5 : 0.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: activo ? iconColor : AppColors.grayMid),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.delivery_dining_rounded,
-                      color: _deliveryId != null
-                          ? Colors.green
-                          : AppColors.grayMid),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: selectedWorker != null
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                selectedWorker['nombre'] as String? ?? '',
-                                style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.textPrimary),
-                              ),
-                              Text(
-                                '${selectedWorker['tipo_vehiculo'] ?? ''} • ${(selectedWorker['radio_km'] as num?)?.toStringAsFixed(0) ?? '5'} km de radio',
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.grayMid),
-                              ),
-                            ],
-                          )
-                        : const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Delivery OkVenta',
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textPrimary)),
-                              Text(
-                                  'Seleccionar un delivery de la red OkVenta',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.grayMid)),
-                            ],
-                          ),
-                  ),
-                  Icon(Icons.chevron_right,
-                      color: AppColors.grayMid, size: 18),
+                  Text(titulo,
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: activo ? iconColor : AppColors.textPrimary)),
+                  Text(subtitulo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.grayMid)),
                 ],
               ),
             ),
-          ),
-      ],
+            if (activo && trailing == null)
+              Icon(Icons.check_circle_rounded, color: iconColor, size: 20)
+            else if (trailing != null)
+              trailing,
+          ],
+        ),
+      ),
     );
   }
 
