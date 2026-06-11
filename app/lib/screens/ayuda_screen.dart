@@ -243,9 +243,8 @@ class _AyudaScreenState extends State<AyudaScreen> {
                         color: AppColors.primary.withOpacity(0.08),
                         shape: BoxShape.circle,
                       ),
-                      child: const Center(
-                        child: Text('🐒', style: TextStyle(fontSize: 22)),
-                      ),
+                      child: const Icon(Icons.support_agent_rounded,
+                          color: AppColors.primary, size: 22),
                     ),
                   ),
                 ],

@@ -466,8 +466,15 @@ class _MiCuentaScreenState extends State<MiCuentaScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              // Monito
-              const Text('🐒', style: TextStyle(fontSize: 56)),
+              Container(
+                width: 64, height: 64,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.support_agent_rounded,
+                    color: AppColors.primary, size: 32),
+              ),
               const SizedBox(height: 16),
               const Text(
                 'Chatea con nosotros',
@@ -509,21 +516,28 @@ class _MiCuentaScreenState extends State<MiCuentaScreen> {
                             final result = await ApiService
                                 .crearChatDirecto(_userId!);
                             if (!mounted) return;
-                            Navigator.pop(ctx);
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AyudaChatScreen(
-                                  ticketId: result['ticket_id'] as int,
-                                  tipo: 'chat_directo',
-                                  numeroReferencia:
-                                      result['caso_numero'] as String?,
+                            // Cerrar sheet y navegar en frame siguiente
+                            // para evitar conflicto entre pop y push
+                            Navigator.of(ctx).pop();
+                            WidgetsBinding.instance
+                                .addPostFrameCallback((_) {
+                              if (!mounted) return;
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AyudaChatScreen(
+                                    ticketId:
+                                        result['ticket_id'] as int,
+                                    tipo: 'chat_directo',
+                                    numeroReferencia:
+                                        result['caso_numero'] as String?,
+                                  ),
                                 ),
-                              ),
-                            );
+                              );
+                            });
                           } catch (_) {
                             if (mounted) {
-                              Navigator.pop(ctx);
+                              Navigator.of(ctx).pop();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
