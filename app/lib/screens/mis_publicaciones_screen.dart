@@ -26,10 +26,38 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
   bool loading = true;
   String filtro = "activo";
 
+  // ── Búsqueda y categorías ─────────────────────────────────────────────────
+  final _searchCtrl = TextEditingController();
+  String _busqueda = '';
+  String? _categoriaFiltro;  // null = todas
+
   @override
   void initState() {
     super.initState();
     cargarPublicaciones();
+    _searchCtrl.addListener(() {
+      setState(() {
+        _busqueda = _searchCtrl.text.toLowerCase();
+        aplicarFiltro();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<String> get _categoriasDisponibles {
+    final cats = publicaciones
+        .map((p) => p['categoria'] as String?)
+        .whereType<String>()
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return cats;
   }
 
   Future<void> cargarPublicaciones() async {
@@ -60,8 +88,20 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
 
   void aplicarFiltro() {
     publicacionesFiltradas = publicaciones.where((p) {
-      if (filtro == "activo") return p["estado"] != "vendido";
-      if (filtro == "vendido") return p["estado"] == "vendido";
+      // Filtro estado
+      if (filtro == "activo" && p["estado"] == "vendido") return false;
+      if (filtro == "vendido" && p["estado"] != "vendido") return false;
+      // Filtro categoría
+      if (_categoriaFiltro != null &&
+          (p["categoria"] as String?) != _categoriaFiltro) return false;
+      // Filtro búsqueda
+      if (_busqueda.isNotEmpty) {
+        final titulo = (p["titulo"] as String? ?? '').toLowerCase();
+        final desc   = (p["descripcion"] as String? ?? '').toLowerCase();
+        if (!titulo.contains(_busqueda) && !desc.contains(_busqueda)) {
+          return false;
+        }
+      }
       return true;
     }).toList();
   }
@@ -451,20 +491,30 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (_) => const HomeScreen()),
-                      (r) => false,
-                    ),
-                    child: Image.asset("assets/images/logo.png", height: 40),
+                    onTap: () {
+                      if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      } else {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const HomeScreen()),
+                          (r) => false,
+                        );
+                      }
+                    },
+                    child: const Icon(Icons.arrow_back_ios_new_rounded,
+                        size: 20, color: AppColors.carbon),
                   ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    "Mis publicaciones",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Text(
+                      "Mis publicaciones",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                 ],
@@ -473,9 +523,148 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
 
             // Filtros
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: _filtroTabs(),
             ),
+
+            // Búsqueda
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                controller: _searchCtrl,
+                decoration: InputDecoration(
+                  hintText: 'Buscar en mis publicaciones...',
+                  hintStyle: const TextStyle(
+                      fontSize: 13, color: AppColors.grayMid),
+                  prefixIcon: const Icon(Icons.search_rounded,
+                      size: 20, color: AppColors.grayMid),
+                  suffixIcon: _busqueda.isNotEmpty
+                      ? GestureDetector(
+                          onTap: () {
+                            _searchCtrl.clear();
+                            setState(() {
+                              _busqueda = '';
+                              aplicarFiltro();
+                            });
+                          },
+                          child: const Icon(Icons.close_rounded,
+                              size: 18, color: AppColors.grayMid),
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(
+                        color: AppColors.divider, width: 0.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(
+                        color: AppColors.divider, width: 0.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(
+                        color: AppColors.primary, width: 1),
+                  ),
+                ),
+              ),
+            ),
+
+            // Chips de categoría
+            if (_categoriasDisponibles.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 36,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
+                    // Chip "Todas"
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap: () => setState(() {
+                          _categoriaFiltro = null;
+                          aplicarFiltro();
+                        }),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: _categoriaFiltro == null
+                                ? AppColors.primary
+                                : AppColors.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: _categoriaFiltro == null
+                                  ? AppColors.primary
+                                  : AppColors.divider,
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Text(
+                            'Todas',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _categoriaFiltro == null
+                                  ? Colors.white
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Chips por categoría
+                    ..._categoriasDisponibles.map((cat) {
+                      final selected = _categoriaFiltro == cat;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () => setState(() {
+                            _categoriaFiltro = selected ? null : cat;
+                            aplicarFiltro();
+                          }),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? AppColors.primary
+                                  : AppColors.surface,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: selected
+                                    ? AppColors.primary
+                                    : AppColors.divider,
+                                width: 0.5,
+                              ),
+                            ),
+                            child: Text(
+                              cat,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: selected
+                                    ? Colors.white
+                                    : AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 8),
 
             // Lista
             Expanded(
