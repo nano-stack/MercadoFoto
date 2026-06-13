@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import '../services/session_service.dart';
 import '../theme/app_theme.dart';
-
+import '../widgets/net_image.dart';
 class ServicioDetalleScreen extends StatefulWidget {
   final Map<String, dynamic> servicio;
 
@@ -194,11 +194,9 @@ class _ServicioDetalleScreenState extends State<ServicioDetalleScreen> {
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: fotos.isNotEmpty
-                  ? Image.network(
+                  ? NetImage(
                       '${ApiService.baseUrl}${fotos.first}',
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          _fotoPlaceholder(fotoUrl, nombre),
                     )
                   : _fotoPlaceholder(fotoUrl, nombre),
             ),
@@ -376,21 +374,12 @@ class _ServicioDetalleScreenState extends State<ServicioDetalleScreen> {
                         itemCount: fotos.length,
                         separatorBuilder: (_, __) =>
                             const SizedBox(width: 8),
-                        itemBuilder: (_, i) => ClipRRect(
+                        itemBuilder: (_, i) => NetImage(
+                          '${ApiService.baseUrl}${fotos[i]}',
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
                           borderRadius: BorderRadius.circular(10),
-                          child: Image.network(
-                            '${ApiService.baseUrl}${fotos[i]}',
-                            width: 100,
-                            height: 100,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              width: 100,
-                              height: 100,
-                              color: AppColors.background,
-                              child: const Icon(Icons.image,
-                                  color: AppColors.grayMid),
-                            ),
-                          ),
                         ),
                       ),
                     ),
@@ -572,9 +561,7 @@ class _ServicioDetalleScreenState extends State<ServicioDetalleScreen> {
 
   Widget _fotoPlaceholder(String fotoUrl, String nombre) {
     if (fotoUrl.isNotEmpty) {
-      return Image.network('${ApiService.baseUrl}$fotoUrl',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _colorPlaceholder(nombre));
+      return NetImage('${ApiService.baseUrl}$fotoUrl', fit: BoxFit.cover);
     }
     return _colorPlaceholder(nombre);
   }

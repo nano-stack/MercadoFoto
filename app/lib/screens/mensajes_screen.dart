@@ -5,7 +5,7 @@ import '../services/api_service.dart';
 import '../services/session_service.dart';
 import '../theme/app_theme.dart';
 import 'chat_screen.dart';
-
+import '../widgets/net_image.dart';
 class MensajesScreen extends StatefulWidget {
   const MensajesScreen({super.key});
 
@@ -219,21 +219,12 @@ class _MensajesScreenState extends State<MensajesScreen> {
             ),
             const SizedBox(width: 8),
             // Miniatura del producto
-            ClipRRect(
+            NetImage(
+              '${ApiService.baseUrl}$imagenProducto',
+              width: 48,
+              height: 48,
+              fit: BoxFit.cover,
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                '${ApiService.baseUrl}$imagenProducto',
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 48,
-                  height: 48,
-                  color: AppColors.background,
-                  child: const Icon(Icons.image,
-                      size: 20, color: AppColors.grayMid),
-                ),
-              ),
             ),
           ],
         ),

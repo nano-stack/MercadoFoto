@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../services/cart_service.dart';
 import '../theme/app_theme.dart';
 import 'producto_detalle_screen.dart';
+import '../widgets/net_image.dart';
 
 // ── Modelo de categoría (movido aquí desde home_screen) ───────────────────────
 class Categoria {
@@ -465,21 +466,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           children: [
             Stack(
               children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                  child: Container(
-                    height: 140, width: double.infinity,
-                    color: Colors.white,
-                    child: Image.network(
-                      "${ApiService.baseUrl}$imagenUrl",
-                      height: 140, width: double.infinity, fit: BoxFit.contain,
-                      alignment: Alignment(0, -0.4),
-                      errorBuilder: (_, __, ___) => Container(
-                        height: 140, color: Colors.white,
-                        child: const Icon(Icons.image_not_supported, color: AppColors.grayMid),
-                      ),
-                    ),
-                  ),
+                NetImage(
+                  "${ApiService.baseUrl}$imagenUrl",
+                  height: 140,
+                  width: double.infinity,
+                  fit: BoxFit.contain,
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12)),
                 ),
                 if (distKm != null)
                   Positioned(

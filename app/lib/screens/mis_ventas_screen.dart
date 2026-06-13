@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../utils/format_utils.dart';
 import 'producto_detalle_screen.dart';
 import 'seleccionar_entrega_screen.dart';
+import '../widgets/net_image.dart';
 
 class MisVentasScreen extends StatefulWidget {
   const MisVentasScreen({super.key});
@@ -262,17 +263,12 @@ class _TarjetaVentaState extends State<_TarjetaVenta> {
         estado == 'pago_confirmado' && (delivery == null || delivery.isEmpty);
 
     final fotoWidget = fotoUrl != null
-        ? ClipRRect(
+        ? NetImage(
+            fotoUrl.startsWith('http') ? fotoUrl : '${ApiService.baseUrl}$fotoUrl',
+            width: 62,
+            height: 62,
+            fit: BoxFit.cover,
             borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              fotoUrl.startsWith('http')
-                  ? fotoUrl
-                  : '${ApiService.baseUrl}$fotoUrl',
-              width: 62,
-              height: 62,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _iconoFallback(),
-            ),
           )
         : _iconoFallback();
 

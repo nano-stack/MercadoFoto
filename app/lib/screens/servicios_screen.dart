@@ -12,7 +12,7 @@ import 'agregar_servicio_screen.dart';
 import 'delivery_registro_screen.dart';
 import 'mapa_ubicacion_picker_screen.dart';
 import 'servicio_detalle_screen.dart';
-
+import '../widgets/net_image.dart';
 class ServiciosScreen extends StatefulWidget {
   const ServiciosScreen({super.key});
 
@@ -527,11 +527,7 @@ class _TarjetaServicio extends StatelessWidget {
     final isVideo = path.endsWith('.mp4') || path.endsWith('.mov');
     return Stack(
       children: [
-        Image.network(url,
-            width: w, height: h, fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-                width: w, height: h, color: AppColors.background,
-                child: const Icon(Icons.image, color: AppColors.grayMid))),
+        NetImage(url, width: w, height: h, fit: BoxFit.cover),
         if (isVideo)
           Positioned.fill(
             child: Center(
@@ -550,10 +546,9 @@ class _TarjetaServicio extends StatelessWidget {
 
   Widget _avatar(String fotoUrl, String nombre, double w, double h) {
     if (fotoUrl.isNotEmpty) {
-      return Image.network(
+      return NetImage(
         '${ApiService.baseUrl}$fotoUrl',
         width: w, height: h, fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _avatarPlaceholder(nombre, w, h),
       );
     }
     return _avatarPlaceholder(nombre, w, h);

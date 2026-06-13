@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import '../services/api_service.dart';
 import '../services/session_service.dart';
 import '../theme/app_theme.dart';
-
+import '../widgets/net_image.dart';
 class ChatScreen extends StatefulWidget {
   final int publicacionId;
   final String tituloProducto;
@@ -434,21 +434,12 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         title: Row(
           children: [
-            ClipRRect(
+            NetImage(
+              "${ApiService.baseUrl}${widget.imagenUrl}",
+              width: 36,
+              height: 36,
+              fit: BoxFit.cover,
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                "${ApiService.baseUrl}${widget.imagenUrl}",
-                width: 36,
-                height: 36,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 36,
-                  height: 36,
-                  color: AppColors.background,
-                  child: const Icon(Icons.image,
-                      size: 18, color: AppColors.grayMid),
-                ),
-              ),
             ),
             const SizedBox(width: 10),
             Expanded(

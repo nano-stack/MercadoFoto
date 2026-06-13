@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/net_image.dart';
 
 class EditarPublicacionScreen extends StatefulWidget {
   final Map<String, dynamic> producto;
@@ -572,13 +573,11 @@ class _EditarPublicacionScreenState extends State<EditarPublicacionScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(14),
                       child: isExistente
-                          ? Image.network(
+                          ? NetImage(
                               "${ApiService.baseUrl}${_fotosExistentes[i]}",
-                              width: double.infinity, height: 220,
+                              width: double.infinity,
+                              height: 220,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.broken_image_outlined,
-                                  color: AppColors.grayMid, size: 40),
                             )
                           : Image.file(
                               _fotosNuevas[i - _fotosExistentes.length],

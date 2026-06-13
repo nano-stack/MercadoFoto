@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import 'producto_detalle_screen.dart';
-
+import '../widgets/net_image.dart';
 class PerfilPublicoScreen extends StatefulWidget {
   final int userId;
   final String nombre;
@@ -320,16 +320,10 @@ class _PerfilPublicoScreenState extends State<PerfilPublicoScreen> {
                 borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(14)),
                 child: imagenUrl.isNotEmpty
-                    ? Container(
+                    ? NetImage(
+                        imagenUrl,
                         width: double.infinity,
-                        color: Colors.white,
-                        child: Image.network(
-                          imagenUrl,
-                          fit: BoxFit.contain,
-                          width: double.infinity,
-                          alignment: const Alignment(0, -0.4),
-                          errorBuilder: (_, __, ___) => _imagenPlaceholder(),
-                        ),
+                        fit: BoxFit.contain,
                       )
                     : _imagenPlaceholder(),
               ),

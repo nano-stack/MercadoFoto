@@ -5,6 +5,7 @@ import '../utils/format_utils.dart';
 import '../services/session_service.dart';
 import '../theme/app_theme.dart';
 import 'producto_detalle_screen.dart';
+import '../widgets/net_image.dart';
 
 class FavoritosScreen extends StatefulWidget {
   const FavoritosScreen({super.key});
@@ -82,27 +83,14 @@ class _FavoritosScreenState extends State<FavoritosScreen> {
         child: Row(
           children: [
             // Imagen
-            ClipRRect(
+            NetImage(
+              "${ApiService.baseUrl}$imagenUrl",
+              width: 90,
+              height: 90,
+              fit: BoxFit.contain,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(14),
                 bottomLeft: Radius.circular(14),
-              ),
-              child: Container(
-                width: 90, height: 90, color: Colors.white,
-                child: Image.network(
-                  "${ApiService.baseUrl}$imagenUrl",
-                  width: 90,
-                  height: 90,
-                  fit: BoxFit.contain,
-                  alignment: const Alignment(0, -0.4),
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 90,
-                    height: 90,
-                    color: Colors.white,
-                    child: const Icon(Icons.image_not_supported,
-                        color: AppColors.grayMid),
-                  ),
-                ),
               ),
             ),
 

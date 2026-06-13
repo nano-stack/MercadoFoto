@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import 'net_image.dart';
 
 class ItemProductoWidget extends StatelessWidget {
   final Map producto;
@@ -73,21 +74,12 @@ class ItemProductoWidget extends StatelessWidget {
         child: Row(
           children: [
             // Imagen
-            ClipRRect(
+            NetImage(
+              imagen,
+              width: 80,
+              height: 80,
+              fit: BoxFit.cover,
               borderRadius: BorderRadius.circular(10),
-              child: Image.network(
-                imagen,
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 80,
-                  height: 80,
-                  color: AppColors.background,
-                  child: const Icon(Icons.image_not_supported,
-                      color: AppColors.grayMid),
-                ),
-              ),
             ),
 
             const SizedBox(width: 12),

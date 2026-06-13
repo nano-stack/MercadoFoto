@@ -14,6 +14,7 @@ import '../widgets/registro_form_widget.dart';
 import 'chat_screen.dart';
 import 'editar_publicacion_screen.dart';
 import 'perfil_publico_screen.dart';
+import '../widgets/net_image.dart';
 
 // ── Modelo para opciones de compartir (fácil de extender) ─────────────────
 class _OpcionCompartir {
@@ -1041,17 +1042,11 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen> {
                           setState(() => _imgPagina = i),
                       itemBuilder: (ctx, i) => GestureDetector(
                         onTap: () => _verFotoCompleta(imagenes, i),
-                        child: Image.network(
+                        child: NetImage(
                           "${ApiService.baseUrl}${imagenes[i]}",
                           height: 300,
                           width: double.infinity,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            height: 300,
-                            color: AppColors.background,
-                            child: const Icon(Icons.image_not_supported,
-                                color: AppColors.grayMid, size: 48),
-                          ),
                         ),
                       ),
                     ),
@@ -1084,17 +1079,11 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen> {
             else
               GestureDetector(
                 onTap: () => _verFotoCompleta(imagenes, 0),
-                child: Image.network(
+                child: NetImage(
                   "${ApiService.baseUrl}${imagenes.isNotEmpty ? imagenes[0] : ''}",
                   height: 300,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 300,
-                    color: AppColors.background,
-                    child: const Icon(Icons.image_not_supported,
-                        color: AppColors.grayMid, size: 48),
-                  ),
                 ),
               ),
 
