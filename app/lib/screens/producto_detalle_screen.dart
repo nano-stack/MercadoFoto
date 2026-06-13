@@ -974,6 +974,10 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen> {
     final bool esInvitado = userId == null;
     final bool esDueno =
         userId != null && userId == ownerId && ownerId != null;
+    final String condicion =
+        widget.producto["condicion"] as String? ?? 'nuevo';
+    final bool aceptaOfertas =
+        (widget.producto["acepta_ofertas"] as int? ?? 1) == 1;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -1100,19 +1104,57 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Categoría badge
-                  if (categoria != null &&
-                      categoria.toString().isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Row(
-                        children: [
+                  // Badges: condición + categoría + subcategoría
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        // Condición
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: condicion == 'nuevo'
+                                ? const Color(0xFF34C759).withOpacity(0.12)
+                                : Colors.orange.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                condicion == 'nuevo'
+                                    ? Icons.star_outline_rounded
+                                    : Icons.recycling_rounded,
+                                size: 11,
+                                color: condicion == 'nuevo'
+                                    ? const Color(0xFF34C759)
+                                    : Colors.orange,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                condicion == 'nuevo' ? 'Nuevo' : 'Usado',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: condicion == 'nuevo'
+                                      ? const Color(0xFF34C759)
+                                      : Colors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Categoría
+                        if (categoria != null &&
+                            categoria.toString().isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color:
-                                  AppColors.primary.withOpacity(0.1),
+                              color: AppColors.primary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -1124,32 +1166,55 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen> {
                               ),
                             ),
                           ),
-                          if (subcategoria != null &&
-                              subcategoria.toString().isNotEmpty) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.background,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                    color: AppColors.divider,
-                                    width: 0.5),
-                              ),
-                              child: Text(
-                                subcategoria.toString(),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.textSecondary,
-                                ),
+                        // Subcategoría
+                        if (subcategoria != null &&
+                            subcategoria.toString().isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                  color: AppColors.divider, width: 0.5),
+                            ),
+                            child: Text(
+                              subcategoria.toString(),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
                               ),
                             ),
-                          ],
-                        ],
-                      ),
+                          ),
+                        // No acepta ofertas
+                        if (!aceptaOfertas)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.grayMid.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.handshake_outlined,
+                                    size: 11, color: AppColors.grayMid),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Sin ofertas/canjes',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.grayMid,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
+                  ),
 
                   // Título
                   Text(
@@ -1444,27 +1509,30 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _abrirOfertar,
-                                icon: const Icon(
-                                    Icons.local_offer_rounded, size: 16),
-                                label: const Text("Ofertar"),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.carbon,
-                                  foregroundColor: AppColors.surface,
-                                  elevation: 0,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                  textStyle: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600),
+                            if (aceptaOfertas) ...[
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _abrirOfertar,
+                                  icon: const Icon(
+                                      Icons.local_offer_rounded, size: 16),
+                                  label: const Text("Ofertar"),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.carbon,
+                                    foregroundColor: AppColors.surface,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
+                                    textStyle: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600),
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 10),

@@ -527,6 +527,8 @@ async def publicar_producto(
     lat: Optional[float] = Form(None),
     lng: Optional[float] = Form(None),
     delivery_id: Optional[int] = Form(None),
+    condicion: Optional[str] = Form("nuevo"),
+    acepta_ofertas: int = Form(1),
 ):
     if not guest_id and not user_id:
         raise HTTPException(
@@ -571,6 +573,8 @@ async def publicar_producto(
             lat,
             lng,
             delivery_id,
+            condicion,
+            acepta_ofertas,
         )
 
         return {

@@ -22,6 +22,8 @@ class _VentaManualScreenState extends State<VentaManualScreen> {
   final _descripcion = TextEditingController();
   final _precio = TextEditingController();
   String _categoria = 'General';
+  String _condicion = 'nuevo';
+  bool _aceptaOfertas = true;
   final List<File> _imagenes = [];
   bool _publicando = false;
   final _picker = ImagePicker();
@@ -133,6 +135,8 @@ class _VentaManualScreenState extends State<VentaManualScreen> {
       request.fields["descripcion"] = _descripcion.text.trim();
       request.fields["precio"] = _precio.text.trim();
       request.fields["categoria"] = _categoria;
+      request.fields["condicion"] = _condicion;
+      request.fields["acepta_ofertas"] = _aceptaOfertas ? "1" : "0";
 
       final session = await SessionService.obtenerSesion();
       if (session["user_id"] != null) {
@@ -277,6 +281,8 @@ class _VentaManualScreenState extends State<VentaManualScreen> {
                 const SizedBox(height: 24),
                 _buildCampo("Título *", _titulo),
                 _buildCampoMultilinea("Descripción", _descripcion),
+                _buildCondicion(),
+                _buildAceptaOfertas(),
                 _buildCampoPrecio(),
                 _buildDropdownCategoria(),
                 const SizedBox(height: 28),
@@ -499,6 +505,109 @@ class _VentaManualScreenState extends State<VentaManualScreen> {
                 .toList(),
             onChanged: (v) =>
                 setState(() => _categoria = v ?? 'General'),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCondicion() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Estado del producto',
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _condicionChip('nuevo', 'Nuevo', Icons.star_outline_rounded),
+              const SizedBox(width: 10),
+              _condicionChip('usado', 'Usado', Icons.recycling_rounded),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _condicionChip(String valor, String label, IconData icono) {
+    final sel = _condicion == valor;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _condicion = valor),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: sel ? AppColors.primary.withOpacity(0.08) : AppColors.surface,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: sel ? AppColors.primary : AppColors.divider,
+              width: sel ? 1.5 : 0.8,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icono,
+                  size: 16,
+                  color: sel ? AppColors.primary : AppColors.grayMid),
+              const SizedBox(width: 6),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: sel ? AppColors.primary : AppColors.textSecondary)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAceptaOfertas() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: GestureDetector(
+        onTap: () => setState(() => _aceptaOfertas = !_aceptaOfertas),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.divider, width: 0.8),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.handshake_outlined,
+                  size: 18,
+                  color: _aceptaOfertas ? AppColors.primary : AppColors.grayMid),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Acepto ofertas o canjes',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary)),
+                    Text('Otros usuarios podrán proponer un precio o canje',
+                        style: TextStyle(fontSize: 11, color: AppColors.grayMid)),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _aceptaOfertas,
+                onChanged: (v) => setState(() => _aceptaOfertas = v),
+                activeThumbColor: AppColors.primary,
+              ),
+            ],
           ),
         ),
       ),

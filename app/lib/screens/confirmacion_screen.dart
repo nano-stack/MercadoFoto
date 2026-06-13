@@ -110,6 +110,10 @@ class _ConfirmacionScreenState extends State<ConfirmacionScreen> {
   bool _publicando = false;
   final _picker = ImagePicker();
 
+  // ── Condición y ofertas ────────────────────────────────────────────────
+  String _condicion = 'nuevo';
+  bool _aceptaOfertas = true;
+
   // ── Talla de envío ────────────────────────────────────────────────────
   String _tallaId = 'S';
   final _altoCtrl  = TextEditingController();
@@ -429,10 +433,12 @@ class _ConfirmacionScreenState extends State<ConfirmacionScreen> {
         Uri.parse("${ApiService.baseUrl}/publicar"),
       );
 
-      request.fields["titulo"]       = titulo.text.trim();
+      request.fields["titulo"]        = titulo.text.trim();
       request.fields["descripcion"]  = descripcion.text.trim();
       request.fields["precio"]       = precio.text.trim();
       request.fields["dimensiones"]  = _getDimensiones();
+      request.fields["condicion"]    = _condicion;
+      request.fields["acepta_ofertas"] = _aceptaOfertas ? "1" : "0";
       if (_categoria.isNotEmpty)    request.fields["categoria"]    = _categoria;
       if (_subcategoria.isNotEmpty) request.fields["subcategoria"] = _subcategoria;
       // Coordenadas (si el usuario eligió incluirlas)
@@ -488,6 +494,110 @@ class _ConfirmacionScreenState extends State<ConfirmacionScreen> {
         backgroundColor: AppColors.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  // ── Condición ─────────────────────────────────────────────────────────
+  Widget _buildCondicion() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Estado del producto',
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _condicionChip('nuevo', 'Nuevo', Icons.star_outline_rounded),
+              const SizedBox(width: 10),
+              _condicionChip('usado', 'Usado', Icons.recycling_rounded),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _condicionChip(String valor, String label, IconData icono) {
+    final sel = _condicion == valor;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _condicion = valor),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: sel ? AppColors.primary.withOpacity(0.08) : AppColors.surface,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: sel ? AppColors.primary : AppColors.divider,
+              width: sel ? 1.5 : 0.8,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icono,
+                  size: 16,
+                  color: sel ? AppColors.primary : AppColors.grayMid),
+              const SizedBox(width: 6),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: sel ? AppColors.primary : AppColors.textSecondary)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAceptaOfertas() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: GestureDetector(
+        onTap: () => setState(() => _aceptaOfertas = !_aceptaOfertas),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.divider, width: 0.8),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.handshake_outlined,
+                  size: 18,
+                  color: _aceptaOfertas ? AppColors.primary : AppColors.grayMid),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Acepto ofertas o canjes',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary)),
+                    Text('Otros usuarios podrán proponer un precio o canje',
+                        style: TextStyle(fontSize: 11, color: AppColors.grayMid)),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _aceptaOfertas,
+                onChanged: (v) => setState(() => _aceptaOfertas = v),
+                activeThumbColor: AppColors.primary,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1383,6 +1493,10 @@ class _ConfirmacionScreenState extends State<ConfirmacionScreen> {
                       // Campos editables
                       _campo("Título", titulo),
                       _campo("Descripción", descripcion, maxLines: 3),
+
+                      // Condición + ofertas
+                      _buildCondicion(),
+                      _buildAceptaOfertas(),
 
                       // Categoría detectada
                       if (_categoria.isNotEmpty)

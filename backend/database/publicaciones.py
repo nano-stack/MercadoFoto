@@ -39,6 +39,8 @@ def init_publicaciones_db():
         "lat REAL",
         "lng REAL",
         "delivery_id INTEGER",
+        "condicion TEXT DEFAULT 'nuevo'",
+        "acepta_ofertas INTEGER DEFAULT 1",
     ]:
         try:
             cursor.execute(f"ALTER TABLE publicaciones ADD COLUMN {col}")
@@ -67,6 +69,8 @@ def guardar_publicacion(
     lat=None,
     lng=None,
     delivery_id=None,
+    condicion=None,
+    acepta_ofertas=1,
 ):
 
     conn = sqlite3.connect(DB)
@@ -86,9 +90,11 @@ def guardar_publicacion(
             imagenes_extra,
             lat,
             lng,
-            delivery_id
+            delivery_id,
+            condicion,
+            acepta_ofertas
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         titulo,
         descripcion,
@@ -103,6 +109,8 @@ def guardar_publicacion(
         lat,
         lng,
         delivery_id,
+        condicion or 'nuevo',
+        acepta_ofertas,
     ))
 
     conn.commit()
