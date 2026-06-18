@@ -2134,6 +2134,63 @@ def disputar_orden(orden_id: int, body: dict):
 
 # ── Reembolso (uso interno / admin) ──────────────────────────────────────────
 
+@app.post("/admin/procesar-imagenes")
+def admin_procesar_imagenes(token: str = ""):
+    """Reprocesa todas las imágenes de uploads: fondo blanco + bounding box + canvas cuadrado."""
+    import io as _io
+    import numpy as _np
+    from pathlib import Path as _Path
+    from rembg import remove as _remove
+    from PIL import Image as _Image
+
+    SECRET = os.environ.get("ADMIN_TOKEN", "okventa-admin-2026")
+    if token != SECRET:
+        raise HTTPException(status_code=403, detail="Token inválido")
+
+    uploads = _Path(UPLOADS_DIR)
+    exts = {".png", ".jpg", ".jpeg", ".webp"}
+    archivos = [p for p in uploads.iterdir() if p.suffix.lower() in exts and p.is_file()]
+
+    def _margen(lado: int) -> float:
+        if lado < 300: return 0.15
+        if lado < 800: return 0.12
+        if lado < 1500: return 0.10
+        return 0.08
+
+    ok = err = 0
+    errores = []
+    for archivo in archivos:
+        try:
+            img = _Image.open(archivo).convert("RGBA")
+            buf = _io.BytesIO()
+            img.save(buf, format="PNG")
+            sin_fondo = _Image.open(_io.BytesIO(_remove(buf.getvalue()))).convert("RGBA")
+
+            alpha = _np.array(sin_fondo)[:, :, 3]
+            rows = _np.any(alpha > 10, axis=1)
+            cols = _np.any(alpha > 10, axis=0)
+            if not rows.any() or not cols.any():
+                continue
+
+            y1, y2 = int(_np.where(rows)[0][0]), int(_np.where(rows)[0][-1])
+            x1, x2 = int(_np.where(cols)[0][0]), int(_np.where(cols)[0][-1])
+            producto = sin_fondo.crop((x1, y1, x2 + 1, y2 + 1))
+            w, h = producto.size
+
+            lado_mayor = max(w, h)
+            margen = int(lado_mayor * _margen(lado_mayor))
+            lado = lado_mayor + 2 * margen
+            canvas = _Image.new("RGB", (lado, lado), (255, 255, 255))
+            canvas.paste(producto, ((lado - w) // 2, (lado - h) // 2), mask=producto.split()[3])
+            canvas.save(str(archivo), format="JPEG", quality=92, optimize=True)
+            ok += 1
+        except Exception as e:
+            err += 1
+            errores.append(f"{archivo.name}: {e}")
+
+    return {"ok": ok, "errores": err, "detalle_errores": errores}
+
+
 @app.post("/ordenes/{orden_id}/reembolsar")
 def reembolsar_orden(orden_id: int):
     orden = obtener_orden(orden_id)
