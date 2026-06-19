@@ -77,6 +77,30 @@ class _MensajesScreenState extends State<MensajesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: const Text(
+          'Mensajes',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.carbon),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(0.5),
+          child: Container(color: AppColors.divider, height: 0.5),
+        ),
+      ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
     if (_userId == null) {
       return const Center(
         child: Text(
@@ -140,7 +164,9 @@ class _MensajesScreenState extends State<MensajesScreen> {
         ? (conv['foto_comprador'] ?? '')
         : (conv['foto_vendedor'] ?? '');
     final titulo = conv['titulo'] ?? '';
-    final ultimoMensaje = conv['ultimo_mensaje'] ?? '';
+    final ultimoMensaje = (conv['ultimo_mensaje'] ?? '').toString().trim().isEmpty
+        ? '📷 Imagen'
+        : conv['ultimo_mensaje'].toString();
     final fecha = _formatFecha(conv['ultimo_at']);
     final imagenProducto = conv['imagen_url'] ?? '';
 
