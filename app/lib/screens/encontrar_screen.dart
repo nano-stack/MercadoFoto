@@ -36,12 +36,26 @@ class _EncontrarScreenState extends State<EncontrarScreen>
   bool _filtroCategoriasActivo = false;
   bool _panelFiltroAbierto     = false;
 
+  // ── Buscador ──────────────────────────────────────────────────────────────
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+
   List<Map<String, dynamic>> get _productosVisibles {
-    if (_categoriasSeleccionadas.isEmpty) return _productosCercanos;
-    return _productosCercanos.where((p) {
-      final cat = (p['categoria'] ?? '').toString();
-      return _categoriasSeleccionadas.contains(cat);
-    }).toList();
+    var lista = _categoriasSeleccionadas.isEmpty
+        ? _productosCercanos
+        : _productosCercanos.where((p) {
+            final cat = (p['categoria'] ?? '').toString();
+            return _categoriasSeleccionadas.contains(cat);
+          }).toList();
+    if (_query.isNotEmpty) {
+      final q = _query.toLowerCase();
+      lista = lista.where((p) {
+        final titulo = (p['titulo'] ?? '').toString().toLowerCase();
+        final cat    = (p['categoria'] ?? '').toString().toLowerCase();
+        return titulo.contains(q) || cat.contains(q);
+      }).toList();
+    }
+    return lista;
   }
 
   List<String> get _categoriasDisponibles {
@@ -80,6 +94,7 @@ class _EncontrarScreenState extends State<EncontrarScreen>
   @override
   void dispose() {
     _pulsoCtrl.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -785,6 +800,50 @@ class _EncontrarScreenState extends State<EncontrarScreen>
               ),
             ),
           ),
+
+        // ── Buscador inferior ──────────────────────────────────────────
+        Positioned(
+          bottom: _seleccionado != null ? 130 : 20,
+          left: 16,
+          right: 72,
+          child: Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2))
+              ],
+            ),
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: (v) => setState(() => _query = v.trim()),
+              style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Buscar producto en el mapa…',
+                hintStyle: const TextStyle(fontSize: 13, color: AppColors.grayMid),
+                prefixIcon: const Icon(Icons.search_rounded,
+                    size: 18, color: AppColors.grayMid),
+                suffixIcon: _query.isNotEmpty
+                    ? GestureDetector(
+                        onTap: () {
+                          _searchCtrl.clear();
+                          setState(() => _query = '');
+                        },
+                        child: const Icon(Icons.close_rounded,
+                            size: 16, color: AppColors.grayMid),
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+              ),
+            ),
+          ),
+        ),
 
         // ── Tarjeta del producto seleccionado ──────────────────────────
         if (_seleccionado != null)

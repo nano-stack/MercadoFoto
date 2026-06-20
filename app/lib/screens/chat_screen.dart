@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../services/session_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/net_image.dart';
+import 'producto_detalle_screen.dart';
 class ChatScreen extends StatefulWidget {
   final int publicacionId;
   final String tituloProducto;
@@ -74,6 +75,28 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       debugPrint("ERROR chat: $e");
     }
+  }
+
+  void _verImagenCompleta(String url) {
+    Navigator.of(context).push(PageRouteBuilder(
+      opaque: false,
+      barrierColor: Colors.black,
+      barrierDismissible: false,
+      pageBuilder: (_, animation, __) => _VisorImagenChat(url: url, animation: animation),
+      transitionsBuilder: (_, animation, __, child) =>
+          FadeTransition(opacity: animation, child: child),
+      transitionDuration: const Duration(milliseconds: 200),
+    ));
+  }
+
+  Future<void> _verProducto() async {
+    try {
+      final producto = await ApiService.obtenerPublicacion(widget.publicacionId);
+      if (!mounted || producto == null) return;
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => ProductoDetalleScreen(producto: producto),
+      ));
+    } catch (_) {}
   }
 
   void _scrollAlFinal() {
@@ -341,17 +364,20 @@ class _ChatScreenState extends State<ChatScreen> {
           child: Column(
             crossAxisAlignment: esMio ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(esMio ? 16 : 4),
-                  bottomRight: Radius.circular(esMio ? 4 : 16),
-                ),
-                child: NetImage(
-                  '${ApiService.baseUrl}$imagenUrl',
-                  width: 220, height: 220,
-                  fit: BoxFit.cover,
+              GestureDetector(
+                onTap: () => _verImagenCompleta('${ApiService.baseUrl}$imagenUrl'),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(16),
+                    topRight: const Radius.circular(16),
+                    bottomLeft: Radius.circular(esMio ? 16 : 4),
+                    bottomRight: Radius.circular(esMio ? 4 : 16),
+                  ),
+                  child: NetImage(
+                    '${ApiService.baseUrl}$imagenUrl',
+                    width: 220, height: 220,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
               const SizedBox(height: 2),
@@ -555,43 +581,48 @@ class _ChatScreenState extends State<ChatScreen> {
               size: 18, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Row(
-          children: [
-            NetImage(
-              "${ApiService.baseUrl}${widget.imagenUrl}",
-              width: 36,
-              height: 36,
-              fit: BoxFit.cover,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.tituloProducto,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    widget.nombreComprador.isNotEmpty
-                        ? '${widget.nombreVendedor} · ${widget.nombreComprador}'
-                        : widget.nombreVendedor,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 11, color: AppColors.grayMid),
-                  ),
-                ],
+        title: GestureDetector(
+          onTap: _verProducto,
+          child: Row(
+            children: [
+              NetImage(
+                "${ApiService.baseUrl}${widget.imagenUrl}",
+                width: 36,
+                height: 36,
+                fit: BoxFit.cover,
+                borderRadius: BorderRadius.circular(8),
               ),
-            ),
-          ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.tituloProducto,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      widget.nombreComprador.isNotEmpty
+                          ? '${widget.nombreVendedor} · ${widget.nombreComprador}'
+                          : widget.nombreVendedor,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 11, color: AppColors.grayMid),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  size: 18, color: AppColors.grayMid),
+            ],
+          ),
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(0.5),
@@ -707,6 +738,68 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Visor de imagen completa con zoom ────────────────────────────────────────
+class _VisorImagenChat extends StatefulWidget {
+  final String url;
+  final Animation<double> animation;
+  const _VisorImagenChat({required this.url, required this.animation});
+
+  @override
+  State<_VisorImagenChat> createState() => _VisorImagenChatState();
+}
+
+class _VisorImagenChatState extends State<_VisorImagenChat> {
+  final _transform = TransformationController();
+
+  @override
+  void dispose() {
+    _transform.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          iconTheme: const IconThemeData(color: Colors.white),
+          elevation: 0,
+        ),
+        body: GestureDetector(
+          onTap: () {},
+          child: Center(
+            child: InteractiveViewer(
+              transformationController: _transform,
+              minScale: 0.8,
+              maxScale: 5.0,
+              child: Image.network(
+                widget.url,
+                fit: BoxFit.contain,
+                loadingBuilder: (_, child, progress) {
+                  if (progress == null) return child;
+                  return Center(
+                    child: CircularProgressIndicator(
+                      value: progress.expectedTotalBytes != null
+                          ? progress.cumulativeBytesLoaded /
+                              progress.expectedTotalBytes!
+                          : null,
+                      color: Colors.white54,
+                      strokeWidth: 2,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -842,14 +842,33 @@ class _MapaServiciosState extends State<_MapaServicios> {
   String? _filtroTipo;       // null = todos | 'ofrezco' | 'busco'
   String? _filtroCategoria;  // null = todas | nombre de categoría
 
-  List<Map<String, dynamic>> get _serviciosFiltrados =>
-      widget.servicios.where((s) {
-        if (_filtroTipo != null && s['tipo'] != _filtroTipo) return false;
-        if (_filtroCategoria != null && s['categoria'] != _filtroCategoria) {
-          return false;
-        }
-        return true;
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<Map<String, dynamic>> get _serviciosFiltrados {
+    var lista = widget.servicios.where((s) {
+      if (_filtroTipo != null && s['tipo'] != _filtroTipo) return false;
+      if (_filtroCategoria != null && s['categoria'] != _filtroCategoria) {
+        return false;
+      }
+      return true;
+    }).toList();
+    if (_query.isNotEmpty) {
+      final q = _query.toLowerCase();
+      lista = lista.where((s) {
+        final titulo = (s['titulo'] ?? '').toString().toLowerCase();
+        final cat    = (s['categoria'] ?? '').toString().toLowerCase();
+        return titulo.contains(q) || cat.contains(q);
       }).toList();
+    }
+    return lista;
+  }
 
   Future<void> _ajustarRadio(Map<String, dynamic> s) async {
     final result = await Navigator.push<UbicacionElegida>(
@@ -1066,6 +1085,50 @@ class _MapaServiciosState extends State<_MapaServicios> {
               ),
             ),
           ),
+
+        // ── Buscador inferior ──────────────────────────────────────────
+        Positioned(
+          bottom: 20,
+          left: 16,
+          right: 16,
+          child: Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2))
+              ],
+            ),
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: (v) => setState(() => _query = v.trim()),
+              style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Buscar servicio en el mapa…',
+                hintStyle: const TextStyle(fontSize: 13, color: AppColors.grayMid),
+                prefixIcon: const Icon(Icons.search_rounded,
+                    size: 18, color: AppColors.grayMid),
+                suffixIcon: _query.isNotEmpty
+                    ? GestureDetector(
+                        onTap: () {
+                          _searchCtrl.clear();
+                          setState(() => _query = '');
+                        },
+                        child: const Icon(Icons.close_rounded,
+                            size: 16, color: AppColors.grayMid),
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+              ),
+            ),
+          ),
+        ),
 
         if (_guardando)
           Container(
