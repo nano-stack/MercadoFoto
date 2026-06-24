@@ -41,15 +41,38 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _enviando = false;
   Timer? _pollingTimer;
 
+  // datos del producto (puede llegar vacío desde notificaciones)
+  String _titulo    = '';
+  String _imagenUrl = '';
+  int    _vendedorId = 0;
+
   @override
   void initState() {
     super.initState();
+    _titulo     = widget.tituloProducto;
+    _imagenUrl  = widget.imagenUrl;
+    _vendedorId = widget.vendedorId;
     _inicializar();
   }
 
   Future<void> _inicializar() async {
     final sesion = await SessionService.obtenerSesion();
     _miUserId = sesion["user_id"];
+
+    // Si llegamos sin datos del producto (desde notificación), los obtenemos
+    if (_imagenUrl.isEmpty || _titulo.isEmpty) {
+      try {
+        final pub = await ApiService.obtenerPublicacion(widget.publicacionId);
+        if (pub != null && mounted) {
+          setState(() {
+            _titulo     = pub['titulo']?.toString() ?? _titulo;
+            _imagenUrl  = pub['imagen_url']?.toString() ?? _imagenUrl;
+            _vendedorId = pub['user_id'] as int? ?? _vendedorId;
+          });
+        }
+      } catch (_) {}
+    }
+
     await _cargarMensajes();
     _pollingTimer = Timer.periodic(
       const Duration(seconds: 5),
@@ -586,7 +609,7 @@ class _ChatScreenState extends State<ChatScreen> {
           child: Row(
             children: [
               NetImage(
-                "${ApiService.baseUrl}${widget.imagenUrl}",
+                "${ApiService.baseUrl}$_imagenUrl",
                 width: 36,
                 height: 36,
                 fit: BoxFit.cover,
@@ -598,7 +621,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.tituloProducto,
+                      _titulo.isNotEmpty ? _titulo : widget.tituloProducto,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

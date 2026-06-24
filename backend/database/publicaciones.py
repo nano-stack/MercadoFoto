@@ -44,6 +44,7 @@ def init_publicaciones_db():
         "sku TEXT",
         "stock INTEGER",
         "codigo_universal TEXT",
+        "tallas TEXT",
     ]:
         try:
             cursor.execute(f"ALTER TABLE publicaciones ADD COLUMN {col}")
@@ -74,6 +75,7 @@ def guardar_publicacion(
     delivery_id=None,
     condicion=None,
     acepta_ofertas=1,
+    tallas=None,
 ):
 
     conn = sqlite3.connect(DB)
@@ -95,9 +97,10 @@ def guardar_publicacion(
             lng,
             delivery_id,
             condicion,
-            acepta_ofertas
+            acepta_ofertas,
+            tallas
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         titulo,
         descripcion,
@@ -114,6 +117,7 @@ def guardar_publicacion(
         delivery_id,
         condicion or 'nuevo',
         acepta_ofertas,
+        tallas,
     ))
 
     conn.commit()

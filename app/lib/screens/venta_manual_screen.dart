@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,11 +29,16 @@ class _VentaManualScreenState extends State<VentaManualScreen> {
   bool _publicando = false;
   final _picker = ImagePicker();
 
+  // Tallas (Ropa / Calzado)
+  Set<String> _tallasSeleccionadas = {};
+  String _tipoTalla = 'adulto'; // 'adulto' | 'niño'
+
   static const _categorias = [
     'Automotriz',
     'Electrónica',
     'Hogar',
     'Ropa',
+    'Calzado',
     'Deportes',
     'Ocio',
     'Mascotas',
@@ -43,6 +49,13 @@ class _VentaManualScreenState extends State<VentaManualScreen> {
     'Negocios',
     'General',
   ];
+
+  static const _tallasRopaAdulto = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+  static const _tallasRopaNino   = ['2', '4', '6', '8', '10', '12', '14', '16'];
+  static const _tallasZapatoAdulto = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45'];
+  static const _tallasZapatoNino   = ['20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34'];
+
+  bool get _esRopaOCalzado => _categoria == 'Ropa' || _categoria == 'Calzado';
 
   @override
   void dispose() {
@@ -137,6 +150,12 @@ class _VentaManualScreenState extends State<VentaManualScreen> {
       request.fields["categoria"] = _categoria;
       request.fields["condicion"] = _condicion;
       request.fields["acepta_ofertas"] = _aceptaOfertas ? "1" : "0";
+      if (_esRopaOCalzado && _tallasSeleccionadas.isNotEmpty) {
+        request.fields["tallas"] = jsonEncode({
+          'tipo': _tipoTalla,
+          'valores': _tallasSeleccionadas.toList(),
+        });
+      }
 
       final session = await SessionService.obtenerSesion();
       if (session["user_id"] != null) {
@@ -285,6 +304,7 @@ class _VentaManualScreenState extends State<VentaManualScreen> {
                 _buildAceptaOfertas(),
                 _buildCampoPrecio(),
                 _buildDropdownCategoria(),
+                if (_esRopaOCalzado) _buildSelectorTallas(),
                 const SizedBox(height: 28),
                 SizedBox(
                   width: double.infinity,
@@ -503,8 +523,10 @@ class _VentaManualScreenState extends State<VentaManualScreen> {
                 .map((c) =>
                     DropdownMenuItem(value: c, child: Text(c)))
                 .toList(),
-            onChanged: (v) =>
-                setState(() => _categoria = v ?? 'General'),
+            onChanged: (v) => setState(() {
+              _categoria = v ?? 'General';
+              _tallasSeleccionadas = {};
+            }),
           ),
         ),
       ),
@@ -614,6 +636,159 @@ class _VentaManualScreenState extends State<VentaManualScreen> {
     );
   }
 
+  // ── Selector de tallas ────────────────────────────────────────────────────
+  List<String> get _tallasList {
+    if (_categoria == 'Ropa') {
+      return _tipoTalla == 'adulto' ? _tallasRopaAdulto : _tallasRopaNino;
+    } else {
+      return _tipoTalla == 'adulto' ? _tallasZapatoAdulto : _tallasZapatoNino;
+    }
+  }
+
+  Widget _buildSelectorTallas() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Tallas disponibles',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: _mostrarGuiaTallas,
+                child: const Row(
+                  children: [
+                    Icon(Icons.straighten_rounded, size: 14, color: AppColors.primary),
+                    SizedBox(width: 4),
+                    Text(
+                      'Guía de tallas',
+                      style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Toggle adulto / niño
+          Container(
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.divider, width: 0.5),
+            ),
+            child: Row(
+              children: ['adulto', 'niño'].map((tipo) {
+                final sel = _tipoTalla == tipo;
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() {
+                      _tipoTalla = tipo;
+                      _tallasSeleccionadas = {};
+                    }),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      decoration: BoxDecoration(
+                        color: sel ? AppColors.primary : Colors.transparent,
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        tipo == 'adulto' ? 'Adulto' : 'Niño/a',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: sel ? AppColors.textOnPrimary : AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Chips de tallas
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _tallasList.map((t) {
+              final sel = _tallasSeleccionadas.contains(t);
+              return GestureDetector(
+                onTap: () => setState(() {
+                  if (sel) {
+                    _tallasSeleccionadas.remove(t);
+                  } else {
+                    _tallasSeleccionadas.add(t);
+                  }
+                }),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 120),
+                  width: 52,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: sel ? AppColors.primary.withOpacity(0.10) : AppColors.surface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: sel ? AppColors.primary : AppColors.divider,
+                      width: sel ? 1.5 : 0.8,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    t,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: sel ? AppColors.primary : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          if (_tallasSeleccionadas.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Seleccionadas: ${_tallasSeleccionadas.join(', ')}',
+              style: const TextStyle(fontSize: 11, color: AppColors.grayMid),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _mostrarGuiaTallas() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.70,
+        maxChildSize: 0.92,
+        minChildSize: 0.4,
+        builder: (_, ctrl) => _GuiaTallasSheet(
+          esCalzado: _categoria == 'Calzado',
+          scrollController: ctrl,
+        ),
+      ),
+    );
+  }
+
   InputDecoration _inputDeco(String label) {
     return InputDecoration(
       labelText: label,
@@ -638,4 +813,205 @@ class _VentaManualScreenState extends State<VentaManualScreen> {
       ),
     );
   }
+}
+
+// ── Guía de tallas (bottom sheet) ─────────────────────────────────────────
+
+class _GuiaTallasSheet extends StatefulWidget {
+  final bool esCalzado;
+  final ScrollController scrollController;
+  const _GuiaTallasSheet({required this.esCalzado, required this.scrollController});
+
+  @override
+  State<_GuiaTallasSheet> createState() => _GuiaTallasSheetState();
+}
+
+class _GuiaTallasSheetState extends State<_GuiaTallasSheet> {
+  String _tipo = 'adulto';
+
+  static const _ropaAdulto = [
+    ['XS',    '78–83',  '60–65',  '86–91'],
+    ['S',     '84–89',  '66–71',  '92–97'],
+    ['M',     '90–95',  '72–77',  '98–103'],
+    ['L',     '96–101', '78–83',  '104–109'],
+    ['XL',    '102–107','84–89',  '110–115'],
+    ['XXL',   '108–113','90–95',  '116–121'],
+    ['XXXL',  '114–119','96–101', '122–127'],
+  ];
+
+  static const _ropaNino = [
+    ['2',  '92'],
+    ['4',  '104'],
+    ['6',  '116'],
+    ['8',  '128'],
+    ['10', '140'],
+    ['12', '152'],
+    ['14', '164'],
+    ['16', '176'],
+  ];
+
+  static const _zapatoAdulto = [
+    ['36', '22.5'],
+    ['37', '23.0'],
+    ['38', '23.5'],
+    ['39', '24.5'],
+    ['40', '25.0'],
+    ['41', '25.5'],
+    ['42', '26.5'],
+    ['43', '27.0'],
+    ['44', '27.5'],
+    ['45', '28.5'],
+  ];
+
+  static const _zapatoNino = [
+    ['20', '12.5'],
+    ['21', '13.0'],
+    ['22', '13.5'],
+    ['23', '14.5'],
+    ['24', '15.0'],
+    ['25', '15.5'],
+    ['26', '16.5'],
+    ['27', '17.0'],
+    ['28', '17.5'],
+    ['29', '18.5'],
+    ['30', '19.0'],
+    ['31', '19.5'],
+    ['32', '20.5'],
+    ['33', '21.0'],
+    ['34', '21.5'],
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Handle
+        Container(
+          width: 40, height: 4,
+          margin: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.divider,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              Text(
+                widget.esCalzado ? 'Guía de tallas — Calzado' : 'Guía de tallas — Ropa',
+                style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded, color: AppColors.grayMid),
+              ),
+            ],
+          ),
+        ),
+        // Toggle adulto / niño
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Container(
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.divider, width: 0.5),
+            ),
+            child: Row(
+              children: ['adulto', 'niño'].map((tipo) {
+                final sel = _tipo == tipo;
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _tipo = tipo),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      decoration: BoxDecoration(
+                        color: sel ? AppColors.primary : Colors.transparent,
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        tipo == 'adulto' ? 'Adulto' : 'Niño/a',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: sel ? AppColors.textOnPrimary : AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Tabla
+        Expanded(
+          child: SingleChildScrollView(
+            controller: widget.scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: widget.esCalzado ? _tablaCalzado() : _tablaRopa(),
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _tablaRopa() {
+    final filas = _tipo == 'adulto' ? _ropaAdulto : _ropaNino;
+    final isAdulto = _tipo == 'adulto';
+    return Table(
+      border: TableBorder.all(color: AppColors.divider, width: 0.5),
+      columnWidths: isAdulto
+          ? const {0: FixedColumnWidth(48), 1: FlexColumnWidth(), 2: FlexColumnWidth(), 3: FlexColumnWidth()}
+          : const {0: FixedColumnWidth(48), 1: FlexColumnWidth()},
+      children: [
+        TableRow(
+          decoration: const BoxDecoration(color: AppColors.background),
+          children: [
+            _th('Talla'),
+            if (isAdulto) ...[_th('Pecho\n(cm)'), _th('Cintura\n(cm)'), _th('Cadera\n(cm)')],
+            if (!isAdulto) _th('Altura (cm)'),
+          ],
+        ),
+        ...filas.map((f) => TableRow(
+          children: f.map((c) => _td(c)).toList(),
+        )),
+      ],
+    );
+  }
+
+  Widget _tablaCalzado() {
+    final filas = _tipo == 'adulto' ? _zapatoAdulto : _zapatoNino;
+    return Table(
+      border: TableBorder.all(color: AppColors.divider, width: 0.5),
+      columnWidths: const {0: FixedColumnWidth(60), 1: FlexColumnWidth()},
+      children: [
+        TableRow(
+          decoration: const BoxDecoration(color: AppColors.background),
+          children: [_th('Talla'), _th('Pie (cm)')],
+        ),
+        ...filas.map((f) => TableRow(children: f.map((c) => _td(c)).toList())),
+      ],
+    );
+  }
+
+  Widget _th(String t) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Text(t, textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+      );
+
+  Widget _td(String t) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+        child: Text(t, textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+      );
 }
