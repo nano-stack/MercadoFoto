@@ -1,31 +1,32 @@
 services:
-  - type: web
-    name: okventa-backend
-    runtime: python
+  # ── Worker: lector de correos y publicador masivo ──────────────────────────
+  - type: worker
+    name: okventa-email-worker
+    env: python
     rootDir: backend
-
-    # Pre-descarga el modelo rembg (~170 MB) en build para que
-    # el primer request no tarde 30 segundos extra.
-    buildCommand: |
-      pip install -r requirements.txt &&
-      python -c "import rembg; rembg.new_session('u2net'); print('Modelo rembg descargado OK')"
-
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
-
-    # Plan mínimo recomendado: Standard ($25/mes)
-    # rembg + onnxruntime necesitan al menos 1 GB de RAM.
-    # Con el plan Starter (512 MB) puede funcionar pero es justo.
-    plan: standard
-
-    # ── Disco persistente ────────────────────────────────────────
-    # Almacena SQLite (publicaciones.db, etc.) e imágenes subidas.
-    # Sin esto, los datos se pierden en cada redeploy.
-    # Costo: $0.25/GB/mes (~$0.25/mes con 1 GB)
-    disk:
-      name: okventa-data
-      mountPath: /data
-      sizeGB: 1
-
+    buildCommand: pip install -r requirements.txt
+    startCommand: python email_publisher.py
     envVars:
-      - key: OPENAI_API_KEY
-        sync: false          # se ingresa manualmente en el dashboard
+      - key: IMAP_SERVER
+        value: mail.galmar.cl
+      - key: IMAP_PORT
+        value: "993"
+      - key: IMAP_CARPETA
+        value: INBOX
+      - key: CHECK_INTERVAL
+        value: "300"
+      # Credenciales — cargar manualmente en el dashboard de Render
+      - key: IMAP_EMAIL
+        sync: false
+      - key: IMAP_PASSWORD
+        sync: false
+      - key: SMTP_SERVER
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_EMAIL
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: API_URL
+        sync: false

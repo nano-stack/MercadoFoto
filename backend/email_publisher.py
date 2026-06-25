@@ -41,6 +41,26 @@ DEFAULT_CONFIG = BASE_DIR / "config_email.json"
 
 
 def cargar_config(path: Path) -> dict:
+    # En Render no existe config_email.json — se usan variables de entorno
+    if not path.exists():
+        imap_email    = os.environ.get("IMAP_EMAIL")
+        imap_password = os.environ.get("IMAP_PASSWORD")
+        api_url       = os.environ.get("API_URL")
+        if not imap_email or not imap_password or not api_url:
+            raise EnvironmentError(
+                "Faltan variables de entorno: IMAP_EMAIL, IMAP_PASSWORD, API_URL"
+            )
+        return {
+            "imap_server":            os.environ.get("IMAP_SERVER", "mail.galmar.cl"),
+            "imap_port":              int(os.environ.get("IMAP_PORT", "993")),
+            "email":                  imap_email,
+            "password":               imap_password,
+            "api_url":                api_url,
+            "check_interval_seconds": int(os.environ.get("CHECK_INTERVAL", "300")),
+            "marca_leido":            True,
+            "carpeta":                os.environ.get("IMAP_CARPETA", "INBOX"),
+        }
+
     with open(path, encoding="utf-8") as f:
         cfg = json.load(f)
     required = ["imap_server", "imap_port", "email", "password", "api_url"]
